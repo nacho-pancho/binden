@@ -17,5 +17,6 @@ int main(int argc, char* argv[]) {
     tpl = generate_ball_template(radius,norm,1);
     sort_template(tpl,1); // sorted by norm
     print_template(tpl);
+    free_template(tpl);
     return 0;
 }
