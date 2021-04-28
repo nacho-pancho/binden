@@ -1,10 +1,10 @@
 cmake_minimum_required (VERSION 2.6)
 set(CMAKE_C_COMPILER "gcc")
 set(CMAKE_CXX_COMPILER "g++")
-project (UPNM)
+project (BINDEN)
 
-set (UPNM_VERSION_MAJOR 1)
-set (UPNM_VERSION_MINOR 0)
+set (BINDEN_VERSION_MAJOR 1)
+set (BINDEN_VERSION_MINOR 0)
 
 option (PARALLEL "Use parallel instructions." OFF)
 
@@ -53,18 +53,19 @@ endif()
 
 file(GLOB LIBSRC . lib/pnm.c) #only one file for now, but GLOB might be handy in the future
 
-add_library(upnm ${LIBSRC})
+add_library(binden ${LIBSRC})
 
 include_directories( ${PROJECT_SOURCE_DIR}/lib )
 
-set(TESTS
-	test
-)
+#set(TESTS
+#	test
+#)
+set(TESTS )
 foreach (aux ${TESTS})
  add_executable (${aux} test/${aux}.c)
  if (WIN32)
-   target_link_libraries(${aux} upnm)
+   target_link_libraries(${aux} binden)
  else() # UNIX
-   target_link_libraries(${aux} upnm -lm)
+   target_link_libraries(${aux} binden -lm)
  endif()
 endforeach (aux)
