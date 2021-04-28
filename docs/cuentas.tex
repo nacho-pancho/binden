@@ -1,0 +1,157 @@
+\documentclass{report}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb,amsfonts}
+\def\opt{\ensuremath{^{*}}}
+\def\loss{\ell}
+\def\expect{\ensuremath{\mathbb{E}}}
+\title{Cuentas DUDE Poisson-Exp}
+\author{Ignacio Ramirez}
+\date{\today}
+\begin{document}
+\maketitle
+
+Formula de dude para $\ell_2$. 
+
+\begin{align}
+x\opt(c,z) &= \expect_{q(X|C=c,Z=z)}\left[\;x\;\right]
+\end{align}
+con
+
+\begin{align}
+q(X=x|c,z) &=
+\frac{p(Z|X=x)p(X=x|C=c)}{\int_0^{\infty}{p(Z|X=x)p(X=x|C=c)}} \\
+ &= \frac{1}{\kappa(c,z)p(Z|X=x)p(X=x|C=c)} p(Z|X=x)p(X=x|C=c) 
+\end{align}
+
+        %% #
+        %% # given that the Channel transition distribution P(Z|X) is Poisson with parameter theta 
+        %% # if we assume that the input distribution P(X) is an Exponential with parameter alpha, P(X|alpha) = alpha exp(-alpha*x)
+        %% # then the observed output (noisy) distribution P(Z) will be Exponential with parameter p = alpha/(alpha+1)
+        %% # with mean (1-p)/p = 1/alpha
+        %% # then, to invert the channel, we only need to compute the average, then alpha from the average
+        %% # and we readily have P(X|c)!
+
+Tengo
+\begin{align}
+p(X=x|C=c) &= \mu^{-1} e^{-x/\mu}\\
+p(Z=z|X=x) &= \frac{x^z}{z!}e^{-x}
+%\loss(x,z) &= (x-z)^2.
+\end{align}
+
+Para $\kappa(c)$ tengo,
+
+\begin{align}
+\kappa(c,z) &= 
+  \int_{0}^{\infty}
+  {
+    \frac{1}{\mu}
+    e^{-\zeta/\mu}
+    \frac{\zeta^z}{z!}
+    e^{-\zeta} 
+    d\zeta
+  } \\
+\kappa(c,z) &= 
+  \frac{1}{\mu{z!}}
+  \int_{0}^{\infty}
+  {
+    \zeta^{z}
+    e^{-\zeta/\mu}
+    e^{-\zeta} 
+    d\zeta
+  } \\
+\kappa(c,z) &=
+  \frac{1}{\mu{z!}}
+  \int_{0}^{\infty}
+  {
+    \zeta^{z}
+    e^{-(1+1/\mu)\zeta}
+    d\zeta
+  } \\
+\kappa(c,z) &=
+\frac{1}{\mu{z!}}\int_{0}^{\infty}
+{
+  \left(
+    \frac{\theta}{1+1/\mu}
+  \right)^{z}
+  e^{-\theta}
+  \frac{1}{1+1/\mu}
+  d\theta
+}
+\quad [cv:\;\theta=(1+1/\mu)\zeta] \\
+\kappa(c,z) &=
+\frac{1}{\mu(1+1/\mu)^{z+1}z!}
+\int_{0}^{\infty}
+{
+  \theta^{z}
+  e^{-\theta}
+  d\theta
+} \\
+\kappa(c) &=
+\frac{1}{\mu(1+1/\mu)^{z+1}z!}
+\Gamma(z+2) = 
+\frac{1}{\mu(1+1/\mu)^{z+1}z!} (z+1)!
+\\
+\kappa(c) &= \frac{1}{\mu(1+1/\mu)^{z+1}}
+\end{align}
+
+La formula del denoiser es casi idéntica, con un $\zeta$ ``de más'',
+
+\begin{align}
+x\opt(c,z) &= 
+  \kappa(c)\int_{0}^{\infty}
+  {
+    \zeta 
+    \frac{1}{\mu}
+    e^{-\zeta/\mu}
+    \frac{\zeta^z}{z!}
+    e^{-\zeta} 
+    d\zeta
+  } \\
+x\opt(c,z) &= 
+  \frac{\kappa(c)}{\mu{z!}}
+  \int_{0}^{\infty}
+  {
+    \zeta^{z+1}
+    e^{-\zeta/\mu}
+    e^{-\zeta} 
+    d\zeta
+  } \\
+x\opt(c,z) &=
+  \frac{\kappa(c)}{\mu{z!}}
+  \int_{0}^{\infty}
+  {
+    \zeta^{z+1}
+    e^{-(1+1/\mu)\zeta}
+    d\zeta
+  } \\
+x\opt(c,z) &=
+\frac{\kappa(c)}{\mu{z!}}\int_{0}^{\infty}
+{
+  \left(
+    \frac{\theta}{1+1/\mu}
+  \right)^{z+1}
+  e^{-\theta}
+  \frac{1}{1+1/\mu}
+  d\theta
+}
+\quad [cv:\;\theta=(1+1/\mu)\zeta] \\
+x\opt(c,z) &=
+\frac{\kappa(c)}{\mu(1+1/\mu)^{z+2}z!}
+\int_{0}^{\infty}
+{
+  \theta^{z+1}
+  e^{-\theta}
+  d\theta
+} \\
+x\opt(c,z) &=
+\frac{1}{\mu(1+1/\mu)^{z+2}z!}
+\Gamma(z+2) = 
+\frac{\kappa(c)}{\mu(1+1/\mu)^{z+2}z!} (z+1)!
+\\
+x\opt(c,z) &= \frac{1}{\kappa(c)}\frac{z+1}{\mu(1+1/\mu)^{z+2}} \\
+x\opt(c,z) &= \mu(1+1/\mu)^{z+1}\frac{z+1}{\mu(1+1/\mu)^{z+2}} \\
+x\opt(c,z) &= \frac{z+1}{1+1/\mu} \\
+\end{align}
+
+
+\end{document}
