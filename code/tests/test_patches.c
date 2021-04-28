@@ -3,6 +3,8 @@
 
 #include "pnm.h"
 #include "image.h"
+#include "templates.h"
+#include "patches.h"
 
 int main(int argc, char* argv[]) {
     char ofname[128];
@@ -22,32 +24,60 @@ int main(int argc, char* argv[]) {
         free(img);
         return RESULT_ERROR;
     }
-    snprintf(ofname,128,"mirror_%s",fname);
-    /**
-     * check mirror  using linear coordinates
-     */
-    const int n = img->info.width * img->info.height;
-    for (int i = 0; i < n/2; ++i) {
-        set_linear_pixel(img,n-1-i,get_linear_pixel(img,i));
+    //
+    //
+    //
+    const int m = img->info.height;
+    const int n = img->info.width;
+    //
+    // create template  
+    //
+    const int radius = 3;
+    const int norm = 2;
+    const int exclude_center = 0;
+    template_t* tpl;
+    patch_t* pat;
+    
+    tpl = generate_ball_template(radius,norm,exclude_center);
+    pat = alloc_patch(tpl->k);
+    //
+    // coordinate access
+    //
+    for (int i = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j) {
+            get_patch(img,tpl,i,j,NULL,pat);
+            int s = 0;
+	    for (int r = 0; r < tpl->k; ++r) {
+                s += pat->values[r];
+            }
+	    set_pixel(img,i,j,s/tpl->k);
+        }
     }
+    //
+    // linear access
+    //
+    linear_template_t* ltpl = linearize_template(tpl,m,n);
+    for (int i = 0, li = 0; i < m; ++i) {
+        for (int j = 0; j < n; ++j, ++li) {
+            get_linear_patch(img,ltpl,i,j,NULL,pat);
+            int s = 0;
+            for (int r = 0; r < tpl->k; ++r) {
+                s += pat->values[r];
+            }
+            set_linear_pixel(img,li,s/tpl->k);
+	}
+    }
+    //
+    //
+    //
+    snprintf(ofname,128,"blurred_%s",fname);
     int res = write_pnm(ofname,img);
     if (res != RESULT_OK) {
         fprintf(stderr,"error writing image %s.\n",ofname);
     }
-    /**
-     * invert image using 2D coordinates
-     */
-    for (int i = 0; i < img->info.height; ++i) {
-        for (int j = 0; j < img->info.width; ++j) {
-            set_pixel(img,i,j,img->info.maxval - get_pixel(img,i,j));
-        }
-    }
-    snprintf(ofname,128,"inverted_mirror_%s",fname);
-    res = write_pnm(ofname,img);
-    if (res != RESULT_OK) {
-        fprintf(stderr,"error writing image %s.\n",ofname);
-    }
-
+    free_patch(pat);
+    free_linear_template(ltpl);
+    free_template(tpl);
     pixels_free(img->pixels);
     free(img);
     return res;

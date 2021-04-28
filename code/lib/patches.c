@@ -12,6 +12,22 @@
 
 /*---------------------------------------------------------------------------------------*/
 
+patch_t* alloc_patch(int k) {
+  patch_t* p = (patch_t*) malloc(sizeof(patch_t)); 
+  p->values = (val_t*) malloc(sizeof(val_t)*k);
+  p->k;
+  return p;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void free_patch(patch_t* p) {
+  free(p->values);
+  free(p);
+}
+
+/*---------------------------------------------------------------------------------------*/
+
 void get_patch(const image_t* pimg, const template_t* ptpl, int i, int j, patch_mapper_t mapper, patch_t* pctx) {
     const int k = ptpl->k;
     register int r;
