@@ -1,4 +1,6 @@
 #include <stdlib.h>
+#include <math.h>
+
 #include "templates.h"
 #include "ascmat.h"
 /*---------------------------------------------------------------------------------------*/
@@ -34,7 +36,7 @@ void destroy_template(template_t* pt) {
 
 /*---------------------------------------------------------------------------------------*/
 
-template_t* generate_random_template(int max_l1_radius, int k, template_t* pt) {
+template_t* generate_uniform_random_template(int max_l1_radius, int k, template_t* pt) {
     int r;
     if (pt == NULL) {
         pt = ini_template(NULL,k);
@@ -61,6 +63,58 @@ template_t* generate_random_template(int max_l1_radius, int k, template_t* pt) {
         pt->is[r] = i;
         pt->js[r] = j;
     }
+    return pt;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+template_t* generate_random_template(int radius, int norm, int k, int sym, template_t* pt) {
+    int r;
+    if (pt == NULL) {
+      pt = ini_template(NULL,sym? 4*k:k);
+    }
+    for (r=0 ; r<k ; r++) {
+        // this generates a sample within the linfinity ball
+        // 
+      int i,j;
+      if (!sym) {
+        i = (int)(2.*(double)radius*(double)rand()/(double)RAND_MAX - (double)radius+ 0.5);
+        j = (int)(2.*(double)radius*(double)rand()/(double)RAND_MAX - (double)radius+ 0.5);
+      } else {
+        i = (int)((double)radius*(double)rand()/(double)RAND_MAX+ 0.5);
+        j = (int)((double)radius*(double)rand()/(double)RAND_MAX+ 0.5);       
+      }
+	double rad;
+      int ai = i >= 0 ? i : -i;
+      int aj = j >= 0 ? j : -j;
+      if (norm >= 1000) {
+	rad = ai > aj ? ai : aj;
+      } else if (norm == 1) {
+	rad = ai + aj;
+      } else {
+	rad = pow(pow((double)i,(double)norm) + pow((double)j,(double)norm),1.0/(double)norm);
+      }
+	if ((rad == 0) || (rad > radius)) {
+            r--;
+            continue;
+        } 
+        // see if not already there
+        int r2 ;
+        for (r2 = 0; r2 < r; r2++) {
+            if ((i==pt->is[r2]) && (j==pt->js[r2])) {
+                break;
+            }
+        }
+        if (r2 < r) {
+            r--;
+            continue;
+        }
+        pt->is[r] = i;
+        pt->js[r] = j;
+    }
+    //
+    // symmetrize
+    //
     return pt;
 }
 
@@ -113,6 +167,7 @@ void read_template_multi(const char* fname, template_t** ptpls, int* pntpl) {
 }
 
 /*---------------------------------------------------------------------------------------*/
+
 void print_template(const template_t* ptpl) {
     int min_i = 10000,min_j = 10000, max_i=-10000, max_j=-10000;
     int k,r,l;
@@ -148,4 +203,73 @@ void print_template(const template_t* ptpl) {
         putchar('\n');
     }
 
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void dump_template(const template_t* ptpl,FILE* ft) {
+    int k;
+    for (k = 0; k < ptpl->k; k++) {
+      fprintf(ft,"%3d ",ptpl->is[k]);
+    }
+    fputc('\n',ft);
+    for (k = 0; k < ptpl->k; k++) {
+      fprintf(ft,"%3d ",ptpl->js[k]);
+    }
+    fputc('\n',ft);
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void symmetrize_template(const template_t* in, template_t* out) {
+  const int k = in->k;
+  if (out == NULL) {
+    out = ini_template(NULL,4*k);
+  }
+  int r, sk = k;
+  for (r=0 ; r<k ; r++) {
+    const int i = in->is[r];
+    const int j = in->js[r];
+    out->is[r] = i;
+    out->js[r] = j;
+    if ((i != 0) && (j != 0)) { // i != 0, j != 0
+      out->is[sk]   = -i;
+      out->js[sk++] =  j;
+      out->is[sk]   =  i;
+      out->js[sk++] = -j;
+    }
+    out->is[sk] = -i;
+    out->js[sk++] = -j;
+  }
+  out->k = sk;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+/*---------------------------------------------------------------------------------------*/
+
+template_t* generate_ball_template(int radius, int norm, template_t* pt) {
+  int i,j;
+  int k = 0;
+  for (i = -radius; i <= radius; i++) {
+    for (j = -radius; j <= radius; j++) {
+      if ((i==0) && (j==0)) continue;
+      double rad;
+      int ai = i >= 0 ? i : -i;
+      int aj = j >= 0 ? j : -j;
+      if (norm >= 1000) {
+	rad = ai > aj ? ai : aj;
+      } else if (norm == 1) {
+	rad = ai + aj;
+      } else {
+	rad = pow(pow((double)i,(double)norm) + pow((double)j,(double)norm),1.0/(double)norm);
+      }
+      if (rad <= radius) {
+	pt->is[k] = i;
+	pt->js[k++] = j;
+      }
+    }
+  }
+  pt->k = k;
+  return pt;
 }

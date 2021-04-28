@@ -51,21 +51,12 @@ else()
   set (CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS} -O3"  )
 endif()
 
-file(GLOB LIBSRC . lib/pnm.c) #only one file for now, but GLOB might be handy in the future
+file(GLOB LIBSRC . lib/*.c) #only one file for now, but GLOB might be handy in the future
 
 add_library(binden ${LIBSRC})
 
 include_directories( ${PROJECT_SOURCE_DIR}/lib )
 
-#set(TESTS
-#	test
-#)
-set(TESTS )
-foreach (aux ${TESTS})
- add_executable (${aux} test/${aux}.c)
- if (WIN32)
-   target_link_libraries(${aux} binden)
- else() # UNIX
-   target_link_libraries(${aux} binden -lm)
- endif()
-endforeach (aux)
+add_subdirectory(tests)
+
+add_subdirectory(tools)

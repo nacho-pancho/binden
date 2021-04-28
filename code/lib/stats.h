@@ -3,14 +3,25 @@
 #include "patches.h"
 
 /**
- * Strategy for updating patch statistics
+ * Tree structure to efficiently store and search for patches
  */
-typedef void (*stats_updater_t)(void** stats, const val_t z);
+typedef struct patch_node {
+    count_t occu; // number of occurences of this node
+    char  leaf; // 1 if this node is a leaf
+    struct patch_node** children;
+    count_t nchildren;
+    count_t counts;
+} patch_node_t;
+
 
 /**
- * Strategy for printing node stats
+ * Linear access to patches
  */
-typedef void (*stats_printer_t)(const void* stats);
+typedef struct {
+    count_t npatch;
+    patch_node_t** nodes;
+} patch_list_t;
+
 
 /*
  * Gather patch statistics from an image, given a template
@@ -24,15 +35,27 @@ patch_node_t* gather_patch_stats(const image_t* pnoisy,
                                   const image_t* pctx,
                                   const template_t* ptpl,
                                   patch_mapper_t mapper,
-                                  stats_updater_t update_stats,
                                   patch_node_t* ptree);
 
 
-void* get_patch_stats(const patch_node_t* ptree, const patch_t* pctx);
+count_t get_patch_stats(const patch_node_t* ptree, const patch_t* pctx);
 
 /**
  * Print a patch tree with its counts
  */
-void print_patch_stats(patch_node_t* pnode, char* prefix, stats_printer_t print_stats);
+void print_patch_stats(patch_node_t* pnode, char* prefix);
+
+/*---------------------------------------------------------------------------------------*/
+/**
+ * load stats from custom formatted file 
+ */
+patch_node_t* load_stats(const char* fname);
+
+/*---------------------------------------------------------------------------------------*/
+
+/**
+ * save stats to custom formatted file 
+ */
+void save_stats(const char* fname, const patch_node_t* stats);
 
 #endif

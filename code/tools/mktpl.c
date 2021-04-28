@@ -6,31 +6,8 @@
 
 #include "image.h"
 #include "ascmat.h"
+#include "templates.h"
 
-typedef int index_t;
-
-/** 2D template_t */
-typedef struct {
-    index_t* is;
-    index_t* js;
-    unsigned int k;
-} template_t;
-
-void read_template_multi(const char* fname, template_t** ptpls, int* ntemplates);
-
-template_t* ini_template(template_t* pt, int k);
-
-void destroy_template(template_t* pt);
-
-void print_template(const template_t* ptpl);
-
-void dump_template(const template_t* ptpl,FILE* ft);
-
-template_t* generate_ball_template(int radius, int norm, template_t* pt);
-
-template_t* generate_random_template(int radius, int norm, int k, int sym, template_t* pt);
-
-void symmetrize_template(const template_t* in, template_t* out);
 
 /*---------------------------------------------------------------------------------------*/
 /* MAIN */
@@ -242,7 +219,7 @@ void parse_options(int* pargc, char** pargv[]) {
                 maxscale = atoi(argv[0]+2);
             else if (argc-- > 0) // parameter val is next arg
                 maxscale = atoi((++argv)[0]);
-            printf("maxradius=%d\n",maxradius);
+            printf("maxscale=%d\n",maxscale);
             break;
         default:
             printf("Unknown option %s\n",argv[0]);
@@ -252,6 +229,7 @@ void parse_options(int* pargc, char** pargv[]) {
     *pargv = argv;
 }
 
+#if 0
 /*---------------------------------------------------------------------------------------*/
 
 template_t* ini_template(template_t* pt, int k) {
@@ -352,6 +330,8 @@ template_t* generate_random_template(int radius, int norm, int k, int sym, templ
     //
     return pt;
 }
+
+/*---------------------------------------------------------------------------------------*/
 
 void symmetrize_template(const template_t* in, template_t* out) {
   const int k = in->k;
@@ -472,3 +452,4 @@ void print_template(const template_t* ptpl) {
     }
 
 }
+#endif

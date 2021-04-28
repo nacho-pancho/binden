@@ -1,9 +1,16 @@
 #include "stats.h"
 #include <string.h>
+#include <stdlib.h>
+
+static patch_node_t* create_node(const int leaf, const int alph_size); // should be static
+
+static const patch_node_t* get_patch_node(const patch_node_t* ptree, const patch_t* ppatch); // should be static
+
+static void destroy_node(patch_node_t* pnode); // should be static
 
 /*---------------------------------------------------------------------------------------*/
 
-void update_patch_stats(const patch_t* pctx, const val_t z, stats_updater_t update_stats, patch_node_t* ptree) {
+void update_patch_stats(const patch_t* pctx, const val_t z, patch_node_t* ptree) {
     patch_node_t* pnode = ptree, *nnode = NULL;
     const int k = pctx->k;
     const val_t* const cv = pctx->values;
@@ -25,8 +32,8 @@ void update_patch_stats(const patch_t* pctx, const val_t z, stats_updater_t upda
     }
     // this one is always a leaf, and the contents of the node are the average
     pnode->occu++;
-    update_stats(&nnode->stats,z);
-}
+    pnode->counts += z;
+    }
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -34,7 +41,6 @@ patch_node_t* gather_patch_stats(const image_t* pnoisy,
                                   const image_t* pctximg,
                                   const template_t* ptpl,
                                   patch_mapper_t mapper,
-                                  stats_updater_t update_stats,
                                   patch_node_t* ptree) {
     register int i,j;
     const int m = pnoisy->info.height;
@@ -61,7 +67,7 @@ patch_node_t* gather_patch_stats(const image_t* pnoisy,
             get_patch(pctximg,ptpl,i,j,mapper,&ctx);
 #endif
             const int z = get_pixel(pnoisy,i,j);
-            update_patch_stats(&ctx,z,update_stats,ptree);
+            update_patch_stats(&ctx,z,ptree);
         }
     }
     return ptree;
@@ -69,11 +75,9 @@ patch_node_t* gather_patch_stats(const image_t* pnoisy,
 
 /*---------------------------------------------------------------------------------------*/
 
-void print_patch_stats(patch_node_t* pnode, char* prefix, stats_printer_t print_stats) {
+void print_patch_stats(patch_node_t* pnode, char* prefix) {
     if (pnode->leaf) {
-        printf("%s (%ld)",prefix,pnode->occu);
-        print_stats(pnode->stats);
-        putchar('\n');
+        printf("%s %10ld / %10ld\n",prefix,pnode->counts,pnode->occu);
     } else {
         int i;
         const int nc = pnode->nchildren;
@@ -82,11 +86,82 @@ void print_patch_stats(patch_node_t* pnode, char* prefix, stats_printer_t print_
                 char tmp[16];
                 snprintf(tmp,16,"%6d, ",i);
                 strncat(prefix,tmp,1023);
-                print_patch_stats(pnode->children[i],prefix,print_stats);
+                print_patch_stats(pnode->children[i],prefix);
                 prefix[strlen(prefix)-strlen(tmp)] = 0;
             }
         }
     }
 }
 
+/*---------------------------------------------------------------------------------------*/
 
+patch_node_t* create_node(const int leaf, const int alph_size) {
+    patch_node_t* pnode = (patch_node_t*) calloc(sizeof(patch_node_t),1);
+    pnode->leaf = leaf;
+    if (!leaf) {
+        pnode->children = (patch_node_t**) calloc(sizeof(patch_node_t*),alph_size);
+        if (!pnode->children) {
+            fprintf(stderr,"Out of memory.");
+        }
+    }
+    return pnode;
+}
+
+/*---------------------------------------------------------------------------------------*/
+void destroy_node(patch_node_t* pnode) {
+    if (pnode != NULL) {
+        if (!pnode->leaf) { // inner node
+            if (pnode->children != NULL) {
+                int i;
+                patch_node_t** ch = pnode->children;
+                const int nc = pnode->nchildren;
+                for (i = 0; i < nc; ++i) {
+                    destroy_node(ch[i]);
+                    ch[i] = NULL;
+                }
+                free(pnode->children);
+                pnode->children = NULL;
+            }
+        }
+        free(pnode);
+    }
+}
+
+
+
+/*---------------------------------------------------------------------------------------*/
+
+const patch_node_t* get_patch_node(const patch_node_t* ptree, const patch_t* pctx) {
+    const patch_node_t* pnode = ptree, *nnode = NULL;
+    const int k = pctx->k;
+    const val_t* const cv = pctx->values;
+    register int j;
+    for (j = 0; j < k; ++j) {
+        const val_t cj = cv[j];
+        nnode = pnode->children[cj];
+        if (nnode == NULL) {
+            fprintf(stderr,"Error: patch node not found at depth=%d c[j]=%d\n",j,cj);
+            return NULL;
+        }
+        pnode = nnode;
+    }
+    // this one is always a leaf, and the contents of the node are the average
+    return pnode;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+count_t get_patch_stats(const patch_node_t* ptree, const patch_t* pctx) {
+  return get_patch_node(ptree,pctx)->counts;
+}
+/*---------------------------------------------------------------------------------------*/
+
+patch_node_t* load_stats(const char* fname) {
+    return NULL;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void save_stats(const char* fname, const patch_node_t* ptree) {
+
+}
