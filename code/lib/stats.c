@@ -48,11 +48,7 @@ patch_node_t* gather_patch_stats(const image_t* pnoisy,
     val_t ctxval[ptpl->k];
     patch_t ctx;
     ctx.k = ptpl->k;
-    index_t li[ptpl->k];
-    linear_template_t ltpl;
-    ltpl.k = ptpl->k;
-    ltpl.li = li;
-    linearize_template(ptpl,m,n,&ltpl);
+    linear_template_t* ltpl = linearize_template(ptpl,m,n);
     ctx.values = ctxval;
     const int alph_size = pnoisy->info.maxval + 1;
     if (ptree == NULL) {
@@ -70,6 +66,7 @@ patch_node_t* gather_patch_stats(const image_t* pnoisy,
             update_patch_stats(&ctx,z,ptree);
         }
     }
+    free_linear_template(ltpl);
     return ptree;
 }
 

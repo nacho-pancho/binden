@@ -55,16 +55,15 @@ int main (int argc, char *argv[]) {
       int par = atoi(tplfile);
       if (par == 0) { // dense 
 	nin = nout = 1;
-        intpl = (template_t*) malloc(sizeof(template_t));
-	ini_template(intpl,(2*maxradius+1)*(2*maxradius)-1);
-	generate_ball_template(maxradius,norm,intpl);	
+	alloc_template((2*maxradius+1)*(2*maxradius)-1);
+	intpl = generate_ball_template(maxradius,norm,0);	
       } else {
         srand(par); // parameter is seed
         intpl = (template_t*) malloc(nin*sizeof(template_t));
         int t = 0;
         for (t = 0; t < nin ; t++) {
             ini_template(&intpl[t],tplsize);
-            generate_random_template(maxradius,norm,tplsize,symmetric,&intpl[t]);
+            generate_random_template(maxradius,norm,tplsize,symmetric,0,&intpl[t]);
 	    //            print_template(&intpl[t]);
         }
       }
@@ -113,8 +112,8 @@ int main (int argc, char *argv[]) {
 	  ini_template(&outtpl[tout],intpl[t].k);
 	  int k;
 	  for (k = 0; k < intpl[t].k; k++) {
-	    outtpl[tout].is[k] = sc * intpl[t].is[k];
-	    outtpl[tout].js[k] = sc * intpl[t].js[k];	    
+	    outtpl[tout].coords[k].i = sc * intpl[t].coords[k].i;
+	    outtpl[tout].coords[k].j = sc * intpl[t].coords[k].j;	    
 	  }
 	}
       }      

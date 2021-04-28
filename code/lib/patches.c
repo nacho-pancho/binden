@@ -16,7 +16,7 @@ void get_patch(const image_t* pimg, const template_t* ptpl, int i, int j, patch_
     const int k = ptpl->k;
     register int r;
     for (r = 0; r < k; ++r) {
-        pctx->values[r] = get_pixel(pimg, i+ptpl->is[r], j+ptpl->js[r]);
+        pctx->values[r] = get_pixel(pimg, i+ptpl->coords[r].i, j+ptpl->coords[r].j);
     }
     if (mapper!=NULL) mapper(pctx,pctx);
 }
