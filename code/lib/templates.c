@@ -249,7 +249,7 @@ template_t* generate_ball_template(int radius, int norm, int exclude_center) {
       }
       if (rad <= radius) {
 	pt->coords[k].i = i;
-	pt->coords[k++].i = j;
+	pt->coords[k++].j = j;
       }
     }
   }
