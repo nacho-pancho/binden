@@ -256,3 +256,67 @@ template_t* generate_ball_template(int radius, int norm, int exclude_center) {
   pt->k = k;
   return pt;
 }
+
+/*---------------------------------------------------------------------------------------*/
+
+static int compare_coords_r(const void* pa, const void* pb, void* pnorm) {
+    const coord_t* a = (coord_t*) pa;
+    const coord_t* b = (coord_t*) pb;
+    const int norm = *((int*) pnorm);
+    //
+    // first compare norms: smaller goes first
+    //
+	const double na = 
+        pow( fabs((double)a->i), (double)norm ) + 
+        pow( fabs((double)a->j),(double)norm );
+	const double nb = 
+        pow( fabs((double)b->i), (double)norm ) + 
+        pow( fabs((double)b->j),(double)norm );
+    if (na < nb) {
+        return -1;
+    } else if (na > nb) {
+        return 1;
+    } else {
+        // compare angles
+        const double aa = atan2((double)a->j,(double)a->i);
+        const double ab = atan2((double)b->j,(double)b->i);
+        return (aa < ab) ? -1: ((aa > ab) ? 1: 0 );
+    }
+}
+
+static int compare_coords(const void* pa, const void* pb) {
+    const coord_t* a = (coord_t*) pa;
+    const coord_t* b = (coord_t*) pb;
+    const int norm = 2;
+    //
+    // first compare norms: smaller goes first
+    //
+	const double na = 
+        pow( fabs((double)a->i), (double)norm ) + 
+        pow( fabs((double)a->j),(double)norm );
+	const double nb = 
+        pow( fabs((double)b->i), (double)norm ) + 
+        pow( fabs((double)b->j),(double)norm );
+    if (na < nb) {
+        return -1;
+    } else if (na > nb) {
+        return 1;
+    } else {
+        // compare angles
+        const double aa = atan2((double)a->j,(double)a->i);
+        const double ab = atan2((double)b->j,(double)b->i);
+        return (aa < ab) ? -1: ((aa > ab) ? 1: 0 );
+    }
+}
+
+template_t* sort_template(template_t* orig, int in_place) {
+    template_t* out;
+    if (in_place) {
+        out = orig;
+    } else {
+        out = alloc_template(orig->k);
+        memcpy(out->coords,orig->coords,orig->k*sizeof(coord_t));
+    }
+    qsort(out->coords,out->k,sizeof(coord_t),compare_coords);
+    return out;
+}

@@ -51,4 +51,6 @@ void dump_template(const template_t* ptpl,FILE* ft);
 
 void read_template_multi(const char* fname, template_t** ptpls, int* ntemplates);
 
+template_t* sort_template(template_t* orig, int in_place);
+
 #endif

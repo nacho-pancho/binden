@@ -15,6 +15,7 @@ int main(int argc, char* argv[]) {
     const int norm = atoi(argv[2]);    
     template_t* tpl;
     tpl = generate_ball_template(radius,norm,1);
+    sort_template(tpl,1); // sorted by norm
     print_template(tpl);
     return 0;
 }
