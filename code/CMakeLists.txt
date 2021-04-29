@@ -60,3 +60,5 @@ include_directories( ${PROJECT_SOURCE_DIR}/lib )
 add_subdirectory(tests)
 
 add_subdirectory(tools)
+
+add_subdirectory(apps)

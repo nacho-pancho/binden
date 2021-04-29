@@ -7,8 +7,8 @@
  */
 typedef struct patch_node {
     count_t occu; // number of occurences of this node
-    char  leaf; // 1 if this node is a leaf
-    struct patch_node** children;
+    char leaf;  // 1 if this node is a leaf
+    struct patch_node * * children;
     count_t nchildren;
     count_t counts;
 } patch_node_t;
@@ -19,11 +19,11 @@ typedef struct patch_node {
  */
 typedef struct {
     count_t npatch;
-    patch_node_t** nodes;
+    patch_node_t * * nodes;
 } patch_list_t;
 
 
-void free_node(patch_node_t* node);
+void free_node ( patch_node_t * node );
 
 /*
  * Gather patch statistics from an image, given a template
@@ -33,31 +33,31 @@ void free_node(patch_node_t* node);
  * @param M Alphabet size.
  * @param[out] tree This tree is populated with the patches that actually occur, their counts, and their center pixel histogram
  */
-patch_node_t* gather_patch_stats(const image_t* pnoisy,
-                                  const image_t* pctx,
-                                  const template_t* ptpl,
-                                  patch_mapper_t mapper,
-                                  patch_node_t* ptree);
+patch_node_t * gather_patch_stats ( const image_t * pnoisy,
+                                    const image_t * pctx,
+                                    const template_t * ptpl,
+                                    patch_mapper_t mapper,
+                                    patch_node_t * ptree );
 
 
-count_t get_patch_stats(const patch_node_t* ptree, const patch_t* pctx);
+count_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
 
 /**
  * Print a patch tree with its counts
  */
-void print_patch_stats(patch_node_t* pnode, char* prefix);
+void print_patch_stats ( patch_node_t * pnode, char * prefix );
 
 /*---------------------------------------------------------------------------------------*/
 /**
- * load stats from custom formatted file 
+ * load stats from custom formatted file
  */
-patch_node_t* load_stats(const char* fname);
+patch_node_t * load_stats ( const char * fname );
 
 /*---------------------------------------------------------------------------------------*/
 
 /**
- * save stats to custom formatted file 
+ * save stats to custom formatted file
  */
-void save_stats(const char* fname, const patch_node_t* stats);
+void save_stats ( const char * fname, const patch_node_t * stats );
 
 #endif

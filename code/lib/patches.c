@@ -12,54 +12,54 @@
 
 /*---------------------------------------------------------------------------------------*/
 
-patch_t* alloc_patch(int k) {
-  patch_t* p = (patch_t*) malloc(sizeof(patch_t)); 
-  p->values = (val_t*) malloc(sizeof(val_t)*k);
-  p->k = k;
-  return p;
+patch_t * alloc_patch ( int k ) {
+    patch_t * p = ( patch_t * ) malloc ( sizeof( patch_t ) );
+    p->values = ( val_t * ) malloc ( sizeof( val_t ) * k );
+    p->k = k;
+    return p;
 }
 
 /*---------------------------------------------------------------------------------------*/
 
-void free_patch(patch_t* p) {
-  free(p->values);
-  free(p);
+void free_patch ( patch_t * p ) {
+    free ( p->values );
+    free ( p );
 }
 
 /*---------------------------------------------------------------------------------------*/
 
-void get_patch(const image_t* pimg, const template_t* ptpl, int i, int j, patch_mapper_t mapper, patch_t* pctx) {
+void get_patch ( const image_t * pimg, const template_t * ptpl, int i, int j, patch_mapper_t mapper, patch_t * pctx ) {
     const int k = ptpl->k;
     register int r;
-    for (r = 0; r < k; ++r) {
-        pctx->values[r] = get_pixel(pimg, i+ptpl->coords[r].i, j+ptpl->coords[r].j);
+    for ( r = 0 ; r < k ; ++r ) {
+        pctx->values[ r ] = get_pixel ( pimg, i + ptpl->coords[ r ].i, j + ptpl->coords[ r ].j );
     }
-    if (mapper!=NULL) mapper(pctx,pctx);
+    if ( mapper != NULL ) mapper ( pctx, pctx );
 }
 
 /*---------------------------------------------------------------------------------------*/
 
-void print_patch(const patch_t* pctx) {
+void print_patch ( const patch_t * pctx ) {
     int j;
-    printf("[ ");
-    for (j=0; j < pctx->k; j++) {
-       printf("%03d ",pctx->values[j]);
+    printf ( "[ " );
+    for ( j = 0 ; j < pctx->k ; j++ ) {
+        printf ( "%03d ", pctx->values[ j ] );
     }
-    printf("]\n");
+    printf ( "]\n" );
 }
 
 /*---------------------------------------------------------------------------------------*/
 
-void get_linear_patch(const image_t* pimg, const linear_template_t* ptpl, int i, int j, patch_mapper_t mapper, patch_t* pctx) {
+void get_linear_patch ( const image_t * pimg, const linear_template_t * ptpl, int i, int j, patch_mapper_t mapper, patch_t * pctx ) {
     const int k = ptpl->k;
-    const index_t* const lis = ptpl->li;
-    const index_t offset = i*pimg->info.width+j;
-    val_t* pcv = pctx->values;
+    const index_t * const lis = ptpl->li;
+    const index_t offset = i * pimg->info.width + j;
+    val_t * pcv = pctx->values;
     register int r;
-    for (r = 0; r < k; ++r) {
-        pcv[r] = get_linear_pixel(pimg, offset+lis[r]);
+    for ( r = 0 ; r < k ; ++r ) {
+        pcv[ r ] = get_linear_pixel ( pimg, offset + lis[ r ] );
     }
-    if (mapper!=NULL) mapper(pctx,pctx);
+    if ( mapper != NULL ) mapper ( pctx, pctx );
 }
 
 
