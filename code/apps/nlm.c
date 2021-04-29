@@ -81,8 +81,8 @@ int main(int argc, char* argv[]) {
     // search a window of size R
     //
     const int R = 20;
-    const double h = 0.1;
-    const int C = -0.5/(h*h);
+    const double h = 10.0;
+    const double C = -0.5/(h*h);
     linear_template_t* ltpl = linearize_template(tpl,m,n);
     for (int i = 0, li = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j, ++li) {
