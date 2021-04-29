@@ -15,7 +15,7 @@
 patch_t* alloc_patch(int k) {
   patch_t* p = (patch_t*) malloc(sizeof(patch_t)); 
   p->values = (val_t*) malloc(sizeof(val_t)*k);
-  p->k;
+  p->k = k;
   return p;
 }
 

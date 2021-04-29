@@ -23,6 +23,8 @@ typedef struct {
 } patch_list_t;
 
 
+void free_node(patch_node_t* node);
+
 /*
  * Gather patch statistics from an image, given a template
  *

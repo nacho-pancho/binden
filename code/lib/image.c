@@ -17,7 +17,7 @@ int get_linear_pixel(const image_t* pimg, const int li) {
 
 /*---------------------------------------------------------------------------------------*/
 
-int set_pixel(image_t* pimg, const int i, const int j, const pixel_t val) {
+void set_pixel(image_t* pimg, const int i, const int j, const pixel_t val) {
     const image_info_t info = pimg->info;
     assert((i >= 0) && (i < info.height) && (j >= 0) && (j < info.width));
     pimg->pixels[i*info.width+j] = val;

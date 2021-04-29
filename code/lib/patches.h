@@ -9,7 +9,7 @@
  */
 typedef struct patch {
     val_t* values;
-    unsigned int k;
+    int k;
 } patch_t;
 
 

@@ -6,7 +6,6 @@
 #include "templates.h"
 
 int main(int argc, char* argv[]) {
-    char ofname[128];
     if (argc < 2) { 
         fprintf(stderr,"usage: %s <radius> <norm>.\n",argv[0]); 
         return RESULT_ERROR; 

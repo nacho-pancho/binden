@@ -7,20 +7,20 @@
 
 /** 2D coordinates */
 typedef struct coord {
-    index_t i;
-    index_t j;
+    short i;
+    short j;
 } coord_t;
 
 /** set of relative 2D coordinates */
 typedef struct template {
     coord_t* coords;
-    unsigned int k;
+    int k;
 } template_t;
 
 /** Linear version of a template for faster access */
 typedef struct linear_template {
-    index_t* li;
-    unsigned int k;
+    int* li;
+    int k;
 } linear_template_t;
 
 

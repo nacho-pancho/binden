@@ -134,14 +134,14 @@ template_t* generate_random_template(int radius, int norm, int k, int sym, int e
 
 template_t* read_template(const char* fname) {
     double* tpldat  = 0;
-    unsigned nrows = 0;
-    unsigned ncols = 0;
+    unsigned int nrows = 0;
+    unsigned int ncols = 0;
     template_t* pt;
     read_ascii_matrix(fname,&nrows,&ncols,&tpldat);
     printf("TEMPLATE (k=%d):\n",ncols);
     print_ascii_matrix(nrows,ncols,tpldat);
     pt = alloc_template(ncols);
-    for (int r = 0; r < ncols; ++r) {
+    for (unsigned r = 0; r < ncols; ++r) {
         pt->coords[r].i = tpldat[r];
         pt->coords[r].j = tpldat[ncols+r];
     }
@@ -258,7 +258,7 @@ template_t* generate_ball_template(int radius, int norm, int exclude_center) {
 }
 
 /*---------------------------------------------------------------------------------------*/
-
+#if 0
 static int compare_coords_r(const void* pa, const void* pb, void* pnorm) {
     const coord_t* a = (coord_t*) pa;
     const coord_t* b = (coord_t*) pb;
@@ -283,6 +283,7 @@ static int compare_coords_r(const void* pa, const void* pb, void* pnorm) {
         return (aa < ab) ? -1: ((aa > ab) ? 1: 0 );
     }
 }
+#endif
 
 static int compare_coords(const void* pa, const void* pb) {
     const coord_t* a = (coord_t*) pa;

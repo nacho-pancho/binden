@@ -1,7 +1,7 @@
 #ifndef TYPES_H
 #define TYPES_H
 
-typedef unsigned short val_t;
+typedef short val_t;
 typedef int index_t;
 typedef unsigned long count_t;
 

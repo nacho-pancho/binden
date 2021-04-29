@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
-typedef uint16_t pixel_t;
+typedef int16_t pixel_t;
 //
 // PNM image type codes
 //

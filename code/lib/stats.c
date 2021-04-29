@@ -1,12 +1,12 @@
 #include "stats.h"
 #include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 
 static patch_node_t* create_node(const int leaf, const int alph_size); // should be static
 
 static const patch_node_t* get_patch_node(const patch_node_t* ptree, const patch_t* ppatch); // should be static
 
-static void destroy_node(patch_node_t* pnode); // should be static
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -20,6 +20,8 @@ void update_patch_stats(const patch_t* pctx, const val_t z, patch_node_t* ptree)
         pnode->occu++;
         const int ctx_alph = pnode->nchildren;
         const val_t cj = cv[j];
+	if (cj >= ctx_alph) { printf("cj %d alph %d\n",cj,ctx_alph); }
+	assert(cj < ctx_alph);
         nnode = pnode->children[cj];
         if (nnode == NULL) {
             if (j < (k-1))
@@ -93,19 +95,22 @@ void print_patch_stats(patch_node_t* pnode, char* prefix) {
 /*---------------------------------------------------------------------------------------*/
 
 patch_node_t* create_node(const int leaf, const int alph_size) {
-    patch_node_t* pnode = (patch_node_t*) calloc(sizeof(patch_node_t),1);
+    patch_node_t* pnode = (patch_node_t*) calloc(1,sizeof(patch_node_t));
     pnode->leaf = leaf;
     if (!leaf) {
-        pnode->children = (patch_node_t**) calloc(sizeof(patch_node_t*),alph_size);
+        pnode->children = (patch_node_t**) calloc(alph_size,sizeof(patch_node_t*));
         if (!pnode->children) {
             fprintf(stderr,"Out of memory.");
         }
+	pnode->nchildren = alph_size;
+    } else {
+	pnode->nchildren = 0;
     }
     return pnode;
 }
 
 /*---------------------------------------------------------------------------------------*/
-void destroy_node(patch_node_t* pnode) {
+void free_node(patch_node_t* pnode) {
     if (pnode != NULL) {
         if (!pnode->leaf) { // inner node
             if (pnode->children != NULL) {
@@ -113,7 +118,7 @@ void destroy_node(patch_node_t* pnode) {
                 patch_node_t** ch = pnode->children;
                 const int nc = pnode->nchildren;
                 for (i = 0; i < nc; ++i) {
-                    destroy_node(ch[i]);
+                    free_node(ch[i]);
                     ch[i] = NULL;
                 }
                 free(pnode->children);

@@ -3,9 +3,13 @@
 
 #include "pnm.h"
 #include "image.h"
+#include "templates.h"
+#include "patches.h"
+#include "stats.h"
 
 int main(int argc, char* argv[]) {
-    char ofname[128];
+    char line[1024];
+
     if (argc < 2) { 
         fprintf(stderr,"usage: %s <image>.\n",argv[0]); 
         return RESULT_ERROR; 
@@ -22,33 +26,35 @@ int main(int argc, char* argv[]) {
         free(img);
         return RESULT_ERROR;
     }
-    snprintf(ofname,128,"mirror_%s",fname);
-    /**
-     * check mirror  using linear coordinates
-     */
-    const int n = img->info.width * img->info.height;
-    for (int i = 0; i < n/2; ++i) {
-        set_linear_pixel(img,n-1-i,get_linear_pixel(img,i));
-    }
-    int res = write_pnm(ofname,img);
-    if (res != RESULT_OK) {
-        fprintf(stderr,"error writing image %s.\n",ofname);
-    }
-    /**
-     * invert image using 2D coordinates
-     */
-    for (int i = 0; i < img->info.height; ++i) {
-        for (int j = 0; j < img->info.width; ++j) {
-            set_pixel(img,i,j,img->info.maxval - get_pixel(img,i,j));
-        }
-    }
-    snprintf(ofname,128,"inverted_mirror_%s",fname);
-    res = write_pnm(ofname,img);
-    if (res != RESULT_OK) {
-        fprintf(stderr,"error writing image %s.\n",ofname);
-    }
-
+    //
+    //
+    //
+    //
+    // create template  
+    //
+    const int radius = 2;
+    const int norm = 2;
+    const int exclude_center = 1;
+    template_t* tpl;
+    patch_t* pat;
+    
+    tpl = generate_ball_template(radius,norm,exclude_center);
+    pat = alloc_patch(tpl->k);
+    //
+    // coordinate access
+    //
+    patch_node_t* stats_tree;
+    printf("image alphabet size %d\n",img->info.maxval + 1);
+    stats_tree = gather_patch_stats(img,img,tpl,NULL,NULL);
+    line[0] = 0;
+    print_patch_stats(stats_tree,line);
+    //
+    //
+    //
+    free_node(stats_tree);
+    free_patch(pat);
+    free_template(tpl);
     pixels_free(img->pixels);
     free(img);
-    return res;
+    return 0;
 }

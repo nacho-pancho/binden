@@ -252,7 +252,7 @@ int read_pixels(FILE* fhandle, const int depth, const int channels, const int en
         return RESULT_ERROR;
       }
     }
-
+    return RESULT_OK;
   }
 }
 //
@@ -382,7 +382,6 @@ static int read_sample_1(FILE* fhandle) { // NOT REENTRANT!
   }
   val = (buffer & mask) ? 1 : 0;
   mask >>= 1; // shift one bit to right
-  printf("mask %d buffer %d val %d\n",mask,buffer,val);
   return val;
 }
 //
@@ -418,13 +417,11 @@ static int write_sample_1(int v, FILE* fhandle) { // NOT REENTRANT
   static unsigned char buffer = 0x00;
   static unsigned char mask  = 0x80;
   int res;
-  unsigned char val;
   if (fhandle == NULL) { // reset buffer 
     buffer = 0x00;
     mask = 0x80;
     return 0;
   }
-  printf("write: buffer %d mask %d val %d\n",buffer,mask,v);
   if (v) { 
     buffer |= mask; 
   }
