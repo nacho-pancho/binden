@@ -1,6 +1,9 @@
 #ifndef BIT_FUN_H
 #define BIT_FUN_H
 
+#include "types.h"
+#define block_t upixel_t
+
 #ifdef __GNUC__
 #define block_weight(a) __builtin_popcountl(a)
 #else

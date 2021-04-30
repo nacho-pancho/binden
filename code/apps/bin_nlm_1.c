@@ -14,129 +14,149 @@
 #include "templates.h"
 #include "patches.h"
 #include "patch_mapper.h"
+#include "bitfun.h"
 
-uint8_t* extract_patches(const image_t* img, const patch_template_t* tpl) {
+upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
     //
     // determine total number of patches in image
     //
     const index_t n = img->info.width;
     const index_t m = img->info.height;
-    const index_t npatches = m*n;
-    const size_t sbytes = sizeof(upixel_t);
-    const size_t sbits = 8*sbytes;
+    const index_t npatches = m * n;
     const size_t ki = tpl->k;
-    const size_t ko = tpl->k / sbits + (tpl->k % sbits ? 1 : 0);
-    printf("allocating %ld bytes for all %ld patches\n",ko*npatches,npatches);
-    uint8_t* all_patches = malloc(ko*npatches);
-    patch_t* p = alloc_patch(ki);
-    patch_t* q = alloc_patch(ko);
-    linear_template_t* ltpl = linearize_template(tpl,m,n);
-    for (int i = 0, li = 0; i < m; ++i) {
-        for (int j = 0; j < n; ++j, ++li) {
-            get_linear_patch(img,ltpl,i,j,p);
+    const size_t ko = compute_binary_mapping_samples ( ki );
+    //const size_t sbits = 8*sbytes;
+    printf ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
+    upixel_t* all_patches = ( upixel_t* ) malloc ( ko * npatches * sizeof( upixel_t ) );
+    patch_t* p = alloc_patch ( ki );
+    patch_t* q = alloc_patch ( ko );
+    linear_template_t* ltpl = linearize_template ( tpl, m, n );
+    for ( int i = 0, li = 0 ; i < m ; ++i ) {
+        for ( int j = 0 ; j < n ; ++j, ++li ) {
+            get_linear_patch ( img, ltpl, i, j, p );
             //
             // remove mean
             //
             int mean = 0;
-            for (int r = 0; r < p->k; ++r) 
-                mean += p->values[r];
+            for ( int r = 0 ; r < p->k ; ++r )
+                mean += p->values[ r ];
             mean /= p->k;
-            for (int r = 0; r < p->k; ++r) 
-                p->values[r] -= mean;            
+            for ( int r = 0 ; r < p->k ; ++r )
+                p->values[ r ] -= mean;
             //
             // binarize
             //
-            binary_patch_mapper(p,q);
+            binary_patch_mapper ( p, q );
             // copy raw bytes
-            memcpy(all_patches+li*sbytes,q->values,sbytes);
+            memcpy ( all_patches + li * ko, q->values, ko * sizeof( upixel_t ) );
         }
-    } 
-    free_linear_template(ltpl);
-    free_patch(q);
-    free_patch(p);
+    }
+    free_linear_template ( ltpl );
+    free_patch ( q );
+    free_patch ( p );
     return all_patches;
 }
 
 /**
  * the distance between two patches is computed as the number of different
  * bits between their binary representations.
- * we must handle raw bytes and conver them to the appropriate sizes 
+ * we must handle raw bytes and conver them to the appropriate sizes
  */
-int patch_dist(uint8_t* all_patches, const index_t i, const index_t j, const size_t nbytes) {
-    const uint8_t* bytesi = all_patches[nbytes*i];
-    const uint8_t* bytesj = all_patches[nbytes*j];
+int patch_dist ( upixel_t* all_patches, const index_t i, const index_t j, const patch_template_t* tpl ) {
+    const index_t nsamples = compute_binary_mapping_samples ( tpl->k );
+    const upixel_t* samplesi = &all_patches[ nsamples * i ];
+    const upixel_t* samplesj = &all_patches[ nsamples * j ];
     int d = 0;
-    for (int k = 0; k < nbytes; ++k) {
-        
+    for ( index_t k = 0 ; k < nsamples ; ++k ) {
+        upixel_t bdif = samplesi[ k ] ^ samplesj[ k ];
+        d += block_weight ( bdif );
     }
+    return d;
 }
 
-int main(int argc, char* argv[]) {
-    char ofname[128];
-    if (argc < 2) { 
-        fprintf(stderr,"usage: %s <image>.\n",argv[0]); 
-        return RESULT_ERROR; 
-    }
-    const char* fname = argv[1];    
-    image_t* img = read_pnm(fname);
-    if (img == NULL) {
-        fprintf(stderr,"error opening image %s.\n",fname);
+int main ( int argc, char* argv[] ) {
+    char ofname[ 128 ];
+    if ( argc < 2 ) {
+        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
         return RESULT_ERROR;
     }
-    if (img->info.result != RESULT_OK) {
-        fprintf(stderr,"error reading image %s.\n",fname);
-        pixels_free(img->pixels);
-        free(img);
+    const char* fname = argv[ 1 ];
+    image_t* img = read_pnm ( fname );
+    if ( img == NULL ) {
+        fprintf ( stderr, "error opening image %s.\n", fname );
+        return RESULT_ERROR;
+    }
+    if ( img->info.result != RESULT_OK ) {
+        fprintf ( stderr, "error reading image %s.\n", fname );
+        pixels_free ( img->pixels );
+        free ( img );
         return RESULT_ERROR;
     }
     image_t out;
     out.info = img->info;
-    out.pixels = pixels_copy(&img->info,img->pixels);
+    out.pixels = pixels_copy ( &img->info, img->pixels );
     //
     //
     //
     const int m = img->info.height;
     const int n = img->info.width;
     //
-    // create template  
+    // create template
     //
     const int radius = 3;
     const int norm = 2;
     const int exclude_center = 0;
     patch_template_t* tpl;
-    
-    tpl = generate_ball_template(radius,norm,exclude_center);
-    float sigma = radius;
+
+    tpl = generate_ball_template ( radius, norm, exclude_center );
     //
     // non-local means
     // search a window of size R
     //
-    printf("extracting patches....\n");
-    uint8_t* all_patches = extract_patches(img,tpl);
-    patch_dist(all_patches,100,200);
+    printf ( "extracting patches....\n" );
+    upixel_t* all_patches = extract_patches ( img, tpl );
+    patch_dist ( all_patches, 100, 200, tpl );
 
-    printf("denoising....\n");
-    for (int i = 0, li = 0; i < m; ++i) {
-        for (int j = 0; j < n; ++j, ++li) {
-            const pixel_t z = get_linear_pixel(img,li);
-            const pixel_t x = z;
-            set_linear_pixel(&out,li,x);
+    printf ( "denoising....\n" );
+    const int R = 20;
+    const double h = argc < 3 ? 1: atof(argv[2]);
+    const double C = -0.5 / ( h * h );
+    for ( int i = 0, li = 0 ; i < m ; ++i ) {
+        for ( int j = 0 ; j < n ; ++j, ++li ) {
+            //const pixel_t z = get_linear_pixel ( img, li );
+            double y = 0;
+            double norm = 0;
+            int di0 = i > R     ? i - R : 0;
+            int di1 = i < ( m - R ) ? i + R : m;
+            int dj0 = j > R     ? j - R : 0;
+            int dj1 = j < ( n - R ) ? j + R : n;
+            for ( int di = di0 ; di < di1 ; ++di ) {
+                for ( int dj = dj0 ; dj < dj1 ; ++dj ) {
+                    const int d = patch_dist ( all_patches, i, j, tpl );
+                    const double w = exp ( C * d );
+                    printf("d %d w %f\n",d, w);
+                    y += w * get_pixel ( img, di, dj );
+                    norm += w;
+                }
+            }
+            const int x = ( int ) ( 0.5 + y / norm );
+            set_linear_pixel ( &out, li, x );
         }
     }
 
-    printf("saving result...\n");
-    snprintf(ofname,128,"nlm_%s",fname);
-    int res = write_pnm(ofname,&out);
-    if (res != RESULT_OK) {
-        fprintf(stderr,"error writing image %s.\n",ofname);
+    printf ( "saving result...\n" );
+    snprintf ( ofname, 128, "nlm_%s", fname );
+    int res = write_pnm ( ofname, &out );
+    if ( res != RESULT_OK ) {
+        fprintf ( stderr, "error writing image %s.\n", ofname );
     }
 
 
-    printf("finishing...\n");
-    free(all_patches);
-    free_patch_template(tpl);
-    pixels_free(img->pixels);
-    pixels_free(out.pixels);
-    free(img);
+    printf ( "finishing...\n" );
+    free ( all_patches );
+    free_patch_template ( tpl );
+    pixels_free ( img->pixels );
+    pixels_free ( out.pixels );
+    free ( img );
     return res;
 }

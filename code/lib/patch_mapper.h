@@ -14,6 +14,8 @@
 
 #include "patches.h"
 
+size_t compute_binary_mapping_samples(const int k);
+
 /**
  * packs the patch samples into to a binary representation
  * using 1 bit per sample. The MSB holds the first sample.

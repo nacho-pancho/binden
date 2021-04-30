@@ -2,6 +2,11 @@
 #include <assert.h>
 #include <string.h>
 
+size_t compute_binary_mapping_samples(const int k) { 
+    const size_t s = 8*sizeof(upixel_t); // number of BITS that fit in a pixel_t/upixel_t
+    return k / s + (k % s ? 1 : 0);
+}
+
 /**
  * maps the samples of a patch onto a binary representation
  * using the words of the output patch as bit fields.
@@ -63,3 +68,4 @@ void binary_patch_mapper( const patch_t * in, patch_t * out ) {
         }
     }
 }
+
