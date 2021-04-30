@@ -16,18 +16,7 @@
 #include "patch_mapper.h"
 #include "bitfun.h"
 
-pixel_t remove_mean(patch_t* p) {
-    int mean = 0;
-    for ( int r = 0 ; r < p->k ; ++r )
-        mean += p->values[ r ];
-    const index_t mu = (index_t) (mean / p->k);
-    for ( int r = 0 ; r < p->k ; ++r )
-        p->values[ r ] -= mu;
-    return mu;
-}
-
 upixel_t* all_patches;
-upixel_t* all_means;
 
 upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
     //
@@ -40,17 +29,12 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
     const size_t ko = compute_binary_mapping_samples ( ki );
     printf ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
     all_patches = ( upixel_t* ) malloc ( ko * npatches * sizeof( upixel_t ) );
-    all_means   = ( upixel_t* ) malloc ( npatches * sizeof( upixel_t ) );
     patch_t* p = alloc_patch ( ki );
     patch_t* q = alloc_patch ( ko );
     linear_template_t* ltpl = linearize_template ( tpl, m, n );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             get_linear_patch ( img, ltpl, i, j, p );
-            //
-            // remove mean
-            //
-            all_means[li] = remove_mean(p);
             //
             // binarize
             //
@@ -119,6 +103,12 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
+    if ( img->info.maxval > 1) {
+        fprintf ( stderr, "only binary images supported.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
@@ -164,11 +154,11 @@ int main ( int argc, char* argv[] ) {
 #ifdef INSANE_DEBUG
                     printf("d %d w %f\n",d, w);
 #endif                
-                    y += w * (get_pixel ( img, di, dj ) - all_means[lj]);                    
+                    y += w * (get_pixel ( img, di, dj ));                    
                     norm += w;
                 }
             }
-            const int x = ( int ) ( 0.5 + all_means[li] + y / norm );
+            const int x = ( int ) ( 0.5 + y / norm );
             set_linear_pixel ( &out, li, x > 0 ? (x < 255 ? x: 255): 0);
         }
     }
@@ -183,7 +173,6 @@ int main ( int argc, char* argv[] ) {
 
     printf ( "finishing...\n" );
     free ( all_patches );
-    free ( all_means );
     free_patch_template ( tpl );
     pixels_free ( img->pixels );
     pixels_free ( out.pixels );

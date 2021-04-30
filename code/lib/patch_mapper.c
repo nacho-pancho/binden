@@ -52,19 +52,27 @@ void binary_patch_mapper( const patch_t * in, patch_t * out ) {
     const size_t ko = ki / s + (ki % s ? 1 : 0); // number of pixel_t samples required for output
     const upixel_t msb = 1 << (s-1); // MSB
     upixel_t mask = msb;
+    upixel_t aux = 0;
     const pixel_t* p = in->values;
     pixel_t* q = out->values;
     memset(q,0,sizeof(pixel_t)*out->k);
-    for (int i = 0, j = 0; i < ki; ++i) {
+    for (int i = 0, j = 0; i < ki; ++i) {        
+        //printf("i %d p %d mask %x j %d q %x\n",i,p[i],mask,j,aux);
         if (p[i] > 0) {
-            q[j] |= mask;
+            aux |= mask;
         }
         // update binary mask
         // if it gets to 0, 
         mask >>= 1;
         if (!mask) {
             mask = msb; // start again from MSB
+            *((upixel_t*) &q[j]) = aux; // treat sample as unsigned!
             ++j; // advance to next word 
+            aux = 0;
+        }
+        // trailing bits
+        if (aux != 0) {
+            *((upixel_t*) &q[ko-1]) = aux; // treat sample as unsigned!
         }
     }
 }

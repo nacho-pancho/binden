@@ -83,3 +83,44 @@ void print_patch ( const patch_t * pctx ) {
 
 
 
+/*---------------------------------------------------------------------------------------*/
+
+void print_patch_fancy ( const patch_t* patch, const patch_template_t * ptpl ) {
+    index_t min_i = 10000, min_j = 10000, max_i = -10000, max_j = -10000;
+    index_t k, r, l;
+    for ( k = 0 ; k < ptpl->k ; k++ ) {
+        if ( ptpl->coords[ k ].i < min_i ) min_i = ptpl->coords[ k ].i;
+        if ( ptpl->coords[ k ].i > max_i ) max_i = ptpl->coords[ k ].i;
+        if ( ptpl->coords[ k ].j < min_j ) min_j = ptpl->coords[ k ].j;
+        if ( ptpl->coords[ k ].j > max_j ) max_j = ptpl->coords[ k ].j;
+    }
+    index_t a = max_i - min_i;
+    index_t b = max_j - min_j;
+    printf ( "    |" );
+    for ( r = 0 ; r <= b ; r++ ) {
+        printf ( " %2ld ", r + min_j );
+    }
+    printf ( "\n----+" );
+    for ( r = 0 ; r <= b ; r++ ) {
+        printf ( "----" );
+    }
+    putchar ( '\n' );
+    for ( k = 0 ; k <= a ; k++ ) {
+        printf ( " %2ld |", min_i + k );
+        for ( r = 0 ; r <= b ; r++ ) {
+            for ( l = 0 ; l < ptpl->k ; l++ ) {
+                if ( ( ptpl->coords[ l ].i == ( min_i + k ) ) && ( ptpl->coords[ l ].j == ( min_j + r ) ) ) {
+                    printf ( " %4d ", patch->values[ l ] );
+                    break;
+                }
+            }
+            if ( l == ptpl->k )
+                printf ( "    " );
+        }
+        putchar ( '\n' );
+    }
+
+}
+
+
+

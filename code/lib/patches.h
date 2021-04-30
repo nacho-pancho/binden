@@ -38,4 +38,6 @@ void get_mapped_linear_patch ( const image_t * pimg, const linear_template_t * p
 
 void print_patch ( const patch_t * ppatch );
 
+void print_patch_fancy ( const patch_t* patch, const patch_template_t * ptpl );
+
 #endif
