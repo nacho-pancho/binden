@@ -120,7 +120,7 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 4;
+    const int radius = 5;
     const int norm = 2;
     const int exclude_center = 0;
     patch_template_t* tpl;
@@ -134,7 +134,7 @@ int main ( int argc, char* argv[] ) {
     extract_patches ( img, tpl );
 
     printf ( "denoising....\n" );
-    const int R = 20;
+    const int R = 100;
     const double h = argc < 3 ? 1.4: atof(argv[2]);
     const double C = -0.5 / ( h * h );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
@@ -161,6 +161,9 @@ int main ( int argc, char* argv[] ) {
             const int x = ( int ) ( 0.5 + y / norm );
             set_linear_pixel ( &out, li, x > 0 ? (x < 255 ? x: 255): 0);
         }
+	if (!(i % 100)) {
+	    printf("row %d\n",i);
+	}
     }
 
     printf ( "saving result...\n" );

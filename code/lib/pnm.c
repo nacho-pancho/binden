@@ -71,7 +71,9 @@ image_info_t read_pnm_info ( FILE * fhandle ) {
 
     case 4:
         info.channels = 1;
-        info.encoding = PNM_BINARY;
+        //info.encoding = PNM_BINARY; // BROKEN!
+        info.encoding = PNM_ASCII; // OVERRIDE since binary is broken!	
+	info.type = 1;
         break;
 
     case 2: // ASCII PGM
@@ -171,7 +173,6 @@ image_t * read_pnm ( const char * fname ) {
     img->info = info;
     img->pixels = pixels_alloc ( &info );
     read_all ( fhandle, &img->info, img->pixels );
-    fclose ( fhandle );
     return img;
 }
 //
@@ -290,6 +291,7 @@ int write_pixels ( const int depth, const int channels, const int encoding, cons
         return RESULT_OK;
 
     } else {
+	// BROKEN for PBM type 4!
         write_sample_1 ( 0, NULL ); // reset bit buffer!
         for ( int i = 0 ; i < nsamples ; i++ ) {
             if ( write_sample_1 ( pixels[ i ], fhandle ) == RESULT_ERROR ) {
