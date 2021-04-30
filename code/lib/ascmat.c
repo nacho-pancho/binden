@@ -1,8 +1,9 @@
-#include "ascmat.h"
 #include <ctype.h>
 #include <stdlib.h>
 
-int scan_ascii_matrix ( const char * fname, unsigned * pnrows, unsigned * pncols ) {
+#include "ascmat.h"
+
+int scan_ascii_matrix ( const char * fname, index_t * pnrows, index_t * pncols ) {
     char spc;
     int c;
     FILE * f;
@@ -43,7 +44,7 @@ int scan_ascii_matrix ( const char * fname, unsigned * pnrows, unsigned * pncols
         fclose ( f );
         return 0;
     }
-    printf ( "n=%d\n", *pncols );
+    printf ( "n=%ld\n", *pncols );
     *pnrows = 1;
     int empty = 1;
     while ( ( c = fgetc ( f ) ) != EOF ) {
@@ -51,12 +52,12 @@ int scan_ascii_matrix ( const char * fname, unsigned * pnrows, unsigned * pncols
             empty = 0;
         if ( !empty && ( c == '\n' ) ) ( *pnrows )++;
     }
-    printf ( "m=%d\n", *pnrows );
+    printf ( "m=%ld\n", *pnrows );
     fclose ( f );
     return 0;
 }
 
-int read_ascii_matrix ( const char * fname, unsigned * pnrows, unsigned * pncols, double * * matdata ) {
+int read_ascii_matrix ( const char * fname, index_t * pnrows, index_t * pncols, double * * matdata ) {
     int res;
     res = scan_ascii_matrix ( fname, pnrows, pncols );
     if ( res ) return res;
@@ -68,12 +69,12 @@ int read_ascii_matrix ( const char * fname, unsigned * pnrows, unsigned * pncols
 //
 //======================================================================
 //
-int read_ascii_data ( const char * fname, const unsigned nrows, const unsigned ncols, double * data ) {
+int read_ascii_data ( const char * fname, const index_t nrows, const index_t ncols, double * data ) {
     FILE * in;
     in = fopen ( fname, "r" );
     if ( !in ) return -1;
-    const unsigned n = nrows * ncols;
-    unsigned i, r;
+    const index_t n = nrows * ncols;
+    index_t i, r;
     float x;
     for ( i = 0 ; i < n ; ++i ) {
         r = fscanf ( in, "%f", &x );
@@ -87,8 +88,8 @@ int read_ascii_data ( const char * fname, const unsigned nrows, const unsigned n
     return 0;
 }
 
-void print_ascii_matrix ( const unsigned nrows, const unsigned ncols, const double * data ) {
-    unsigned i, j;
+void print_ascii_matrix ( const index_t nrows, const index_t ncols, const double * data ) {
+    index_t i, j;
     for ( i = 0 ; i < nrows ; i++ ) {
         for ( j = 0 ; j < ncols ; j++ ) {
             printf ( "%7.4f ", data[ i * ncols + j ] );

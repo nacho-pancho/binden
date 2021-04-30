@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     const int radius = 3;
     const int norm = 2;
     const int exclude_center = 0;
-    template_t* tpl;
+    patch_template_t* tpl;
     patch_t* pat;
     
     tpl = generate_ball_template(radius,norm,exclude_center);
@@ -45,7 +45,7 @@ int main(int argc, char* argv[]) {
     //
     for (int i = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j) {
-            get_patch(img,tpl,i,j,NULL,pat);
+            get_patch(img,tpl,i,j,pat);
             int s = 0;
 	    for (int r = 0; r < tpl->k; ++r) {
                 s += pat->values[r];
@@ -59,7 +59,7 @@ int main(int argc, char* argv[]) {
     linear_template_t* ltpl = linearize_template(tpl,m,n);
     for (int i = 0, li = 0; i < m; ++i) {
         for (int j = 0; j < n; ++j, ++li) {
-            get_linear_patch(img,ltpl,i,j,NULL,pat);
+            get_linear_patch(img,ltpl,i,j,pat);
             int s = 0;
             for (int r = 0; r < tpl->k; ++r) {
                 s += pat->values[r];
@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
     }
     free_patch(pat);
     free_linear_template(ltpl);
-    free_template(tpl);
+    free_patch_template(tpl);
     pixels_free(img->pixels);
     free(img);
     return res;

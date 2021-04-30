@@ -10,16 +10,16 @@ static const patch_node_t * get_patch_node ( const patch_node_t * ptree, const p
 
 /*---------------------------------------------------------------------------------------*/
 
-void update_patch_stats ( const patch_t * pctx, const val_t z, patch_node_t * ptree ) {
+void update_patch_stats ( const patch_t * pctx, const pixel_t z, patch_node_t * ptree ) {
     patch_node_t * pnode = ptree, * nnode = NULL;
     const int k = pctx->k;
-    const val_t * const cv = pctx->values;
+    const pixel_t * const cv = pctx->values;
     register int j;
     /* traverse tree, creating nodes if necessary, and update counts */
     for ( j = 0 ; j < k ; ++j ) {
         pnode->occu++;
         const int ctx_alph = pnode->nchildren;
-        const val_t cj = cv[ j ];
+        const pixel_t cj = cv[ j ];
         if ( cj >= ctx_alph ) { printf ( "cj %d alph %d\n", cj, ctx_alph ); }
         assert ( cj < ctx_alph );
         nnode = pnode->children[ cj ];
@@ -41,17 +41,24 @@ void update_patch_stats ( const patch_t * pctx, const val_t z, patch_node_t * pt
 
 patch_node_t * gather_patch_stats ( const image_t * pnoisy,
                                     const image_t * pctximg,
-                                    const template_t * ptpl,
+                                    const patch_template_t * ptpl,
                                     patch_mapper_t mapper,
                                     patch_node_t * ptree ) {
     register int i, j;
     const int m = pnoisy->info.height;
     const int n = pnoisy->info.width;
-    val_t ctxval[ ptpl->k ];
+    // temporary patches in stack
+    pixel_t ctxval[ ptpl->k ];
     patch_t ctx;
     ctx.k = ptpl->k;
-    linear_template_t * ltpl = linearize_template ( ptpl, m, n );
     ctx.values = ctxval;
+    
+    pixel_t mctxval[ ptpl->k ];
+    patch_t mctx; 
+    mctx.k = ptpl->k;
+    mctx.values = mctxval;
+
+    linear_template_t * ltpl = linearize_template ( ptpl, m, n );
     const int alph_size = pnoisy->info.maxval + 1;
     if ( ptree == NULL ) {
         ptree = create_node ( 0, alph_size );
@@ -62,10 +69,15 @@ patch_node_t * gather_patch_stats ( const image_t * pnoisy,
 #if LINEARIZE
             get_linear_patch ( pctximg, &ltpl, i, j, mapper, &ctx );
 #else
-            get_patch ( pctximg, ptpl, i, j, mapper, &ctx );
+            if (mapper == NULL) {
+                get_patch ( pctximg, ptpl, i, j, &mctx );
+            } else {
+                get_mapped_patch ( pctximg, ptpl, i, j, mapper, &ctx, &mctx );
+
+            }
 #endif
             const int z = get_pixel ( pnoisy, i, j );
-            update_patch_stats ( &ctx, z, ptree );
+            update_patch_stats ( &mctx, z, ptree );
         }
     }
     free_linear_template ( ltpl );
@@ -136,10 +148,10 @@ void free_node ( patch_node_t * pnode ) {
 const patch_node_t * get_patch_node ( const patch_node_t * ptree, const patch_t * pctx ) {
     const patch_node_t * pnode = ptree, * nnode = NULL;
     const int k = pctx->k;
-    const val_t * const cv = pctx->values;
+    const pixel_t * const cv = pctx->values;
     register int j;
     for ( j = 0 ; j < k ; ++j ) {
-        const val_t cj = cv[ j ];
+        const pixel_t cj = cv[ j ];
         nnode = pnode->children[ cj ];
         if ( nnode == NULL ) {
             fprintf ( stderr, "Error: patch node not found at depth=%d c[j]=%d\n", j, cj );
@@ -153,7 +165,7 @@ const patch_node_t * get_patch_node ( const patch_node_t * ptree, const patch_t 
 
 /*---------------------------------------------------------------------------------------*/
 
-count_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx ) {
+index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx ) {
     return get_patch_node ( ptree, pctx )->counts;
 }
 /*---------------------------------------------------------------------------------------*/

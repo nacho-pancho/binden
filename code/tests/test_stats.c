@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
     const int radius = 2;
     const int norm = 2;
     const int exclude_center = 1;
-    template_t* tpl;
+    patch_template_t* tpl;
     patch_t* pat;
     
     tpl = generate_ball_template(radius,norm,exclude_center);
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     //
     free_node(stats_tree);
     free_patch(pat);
-    free_template(tpl);
+    free_patch_template(tpl);
     pixels_free(img->pixels);
     free(img);
     return 0;

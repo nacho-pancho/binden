@@ -6,51 +6,51 @@
 #include "types.h"
 
 /** 2D coordinates */
-typedef struct coord {
-    short i;
-    short j;
+typedef struct {
+    index_t i;
+    index_t j;
 } coord_t;
 
 /** set of relative 2D coordinates */
-typedef struct template {
+typedef struct {
     coord_t * coords;
-    int k;
-} template_t;
+    index_t k;
+} patch_template_t;
 
 /** Linear version of a template for faster access */
-typedef struct linear_template {
-    int * li;
-    int k;
+typedef struct {
+    index_t * li;
+    index_t k;
 } linear_template_t;
 
 
-template_t * alloc_template ( int maxk );
+patch_template_t * alloc_patch_template ( index_t maxk );
 
-linear_template_t * alloc_linear_template ( int maxk );
+linear_template_t * alloc_linear_template ( index_t maxk );
 
-void free_template ( template_t * pt );
+void free_patch_template ( patch_template_t * pt );
 
 void free_linear_template ( linear_template_t * pt );
 
-template_t * read_template ( const char * fname );
+patch_template_t * read_template ( const char * fname );
 
 
-template_t * generate_uniform_random_template ( int max_l1_radius, int k, int exclude_center );
+patch_template_t * generate_uniform_random_template ( index_t max_l1_radius, index_t k, index_t exclude_center );
 
-template_t * generate_random_template ( int radius, int norm, int k, int sym, int exclude_center );
+patch_template_t * generate_random_template ( index_t radius, index_t norm, index_t k, index_t sym, index_t exclude_center );
 
-template_t * generate_ball_template ( int radius, int norm, int exclude_center );
+patch_template_t * generate_ball_template ( index_t radius, index_t norm, index_t exclude_center );
 
-linear_template_t * linearize_template ( const template_t * pt, int nrows, int ncols );
+linear_template_t * linearize_template ( const patch_template_t * pt, index_t nrows, index_t ncols );
 
-template_t * symmetrize_template ( const template_t * in );
+patch_template_t * symmetrize_template ( const patch_template_t * in );
 
-void print_template ( const template_t * ptpl );
+void print_template ( const patch_template_t * ptpl );
 
-void dump_template ( const template_t * ptpl, FILE * ft );
+void dump_template ( const patch_template_t * ptpl, FILE * ft );
 
-void read_template_multi ( const char * fname, template_t * * ptpls, int * ntemplates );
+void read_template_multi ( const char * fname, patch_template_t * * ptpls, index_t * ntemplates );
 
-template_t * sort_template ( template_t * orig, int in_place );
+patch_template_t * sort_template ( patch_template_t * orig, index_t in_place );
 
 #endif

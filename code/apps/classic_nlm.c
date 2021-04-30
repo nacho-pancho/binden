@@ -7,13 +7,13 @@
 #include "templates.h"
 #include "patches.h"
 
-float* create_gaussian_weights(template_t* tpl, const float sigma) {
+float* create_gaussian_weights(patch_template_t* tpl, const float sigma) {
     const int k = tpl->k;
     float* weights = (float*) malloc(k*sizeof(float));
     float n = 0.0f;
     for (int r = 0; r < k; ++r) {
-        const float i = fabs(tpl->coords[r].i);
-        const float j = fabs(tpl->coords[r].j);
+        const float i = fabs((double)tpl->coords[r].i);
+        const float j = fabs((double)tpl->coords[r].j);
         const float w = exp(-0.5*(i*i + j*j)/(sigma*sigma));
 	weights[r] = w;
 	n += w;
@@ -28,10 +28,10 @@ float* create_gaussian_weights(template_t* tpl, const float sigma) {
 double patch_dist(const patch_t* a, const patch_t* b, const float* weights) {
     const int k = a->k;
     double dist = 0;
-    const val_t* pa = a->values;
-    const val_t* pb = b->values;
+    const pixel_t* pa = a->values;
+    const pixel_t* pb = b->values;
     for (int r = 0; r < k; ++r) {
-        dist += weights[r]*fabs(pa[r]-pb[r]);
+        dist += weights[r]*fabs((double)(pa[r]-pb[r]));
     }
     return dist;
 }
@@ -68,7 +68,7 @@ int main(int argc, char* argv[]) {
     const int radius = 3;
     const int norm = 2;
     const int exclude_center = 0;
-    template_t* tpl;
+    patch_template_t* tpl;
     patch_t* pat, *pot;
     
     tpl = generate_ball_template(radius,norm,exclude_center);
@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     // search a window of size R
     //
     const int R = 20;
-    const double h = 10.0;
+    const double h = 1.4;
     const double C = -0.5/(h*h);
     linear_template_t* ltpl = linearize_template(tpl,m,n);
     for (int i = 0, li = 0; i < m; ++i) {
@@ -89,7 +89,7 @@ int main(int argc, char* argv[]) {
             double y = 0; 
 	    double norm = 0;
 	    int count = 0;
-            get_linear_patch(img,ltpl,i,j,NULL,pat);
+            get_linear_patch(img,ltpl,i,j,pat);
             int di0 = i > R     ? i-R : 0;
             int di1 = i < (m-R) ? i+R : m;
             int dj0 = j > R     ? j-R : 0;
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
             //printf("di0 %d di1 %d dj0 %d dj1 %d\n",di0,di1,dj0,dj1);
             for ( int di = di0; di < di1; ++di ) {
                 for ( int dj = dj0; dj < dj1; ++dj ) {
-                    get_linear_patch(img,ltpl,di,dj,NULL,pot);
+                    get_linear_patch(img,ltpl,di,dj,pot);
 		    const double d = patch_dist(pat,pot,weights);
 		    const double w = exp(C*d);
 		    y += w*get_pixel(img,di,dj);
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
     free_patch(pot);
     free_patch(pat);
     free_linear_template(ltpl);
-    free_template(tpl);
+    free_patch_template(tpl);
     pixels_free(img->pixels);
     pixels_free(out.pixels);
     free(img);

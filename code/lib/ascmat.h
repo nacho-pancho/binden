@@ -28,10 +28,11 @@
 #include <string.h>
 #include <errno.h>
 #include <stdio.h>
+#include "types.h"
 
-int scan_ascii_matrix ( const char * fname, unsigned * pnrows, unsigned * pncols );
-int read_ascii_matrix ( const char * fname, unsigned * pnrows, unsigned * pncols, double * * matdata );
-int read_ascii_data ( const char * fname, const unsigned nrows, const unsigned ncols, double * data );
-void print_ascii_matrix ( const unsigned nrows, const unsigned ncols, const double * data );
+int scan_ascii_matrix ( const char * fname, index_t * pnrows, index_t * pncols );
+int read_ascii_matrix ( const char * fname, index_t * pnrows, index_t * pncols, double * * matdata );
+int read_ascii_data ( const char * fname, const index_t nrows, const index_t ncols, double * data );
+void print_ascii_matrix ( const index_t nrows, const index_t ncols, const double * data );
 
 #endif

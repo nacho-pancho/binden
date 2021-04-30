@@ -12,10 +12,10 @@ int main(int argc, char* argv[]) {
     }
     const int radius = atoi(argv[1]);    
     const int norm = atoi(argv[2]);    
-    template_t* tpl;
+    patch_template_t* tpl;
     tpl = generate_ball_template(radius,norm,1);
     sort_template(tpl,1); // sorted by norm
     print_template(tpl);
-    free_template(tpl);
+    free_patch_template(tpl);
     return 0;
 }

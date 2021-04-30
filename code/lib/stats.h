@@ -6,11 +6,11 @@
  * Tree structure to efficiently store and search for patches
  */
 typedef struct patch_node {
-    count_t occu; // number of occurences of this node
+    index_t occu; // number of occurences of this node
     char leaf;  // 1 if this node is a leaf
     struct patch_node * * children;
-    count_t nchildren;
-    count_t counts;
+    index_t nchildren;
+    index_t counts;
 } patch_node_t;
 
 
@@ -18,8 +18,8 @@ typedef struct patch_node {
  * Linear access to patches
  */
 typedef struct {
-    count_t npatch;
-    patch_node_t * * nodes;
+    index_t npatch;
+    patch_node_t** nodes;
 } patch_list_t;
 
 
@@ -35,12 +35,12 @@ void free_node ( patch_node_t * node );
  */
 patch_node_t * gather_patch_stats ( const image_t * pnoisy,
                                     const image_t * pctx,
-                                    const template_t * ptpl,
+                                    const patch_template_t * ptpl,
                                     patch_mapper_t mapper,
                                     patch_node_t * ptree );
 
 
-count_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
+index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
 
 /**
  * Print a patch tree with its counts

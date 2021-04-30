@@ -1,5 +1,6 @@
 set(TARGETS 
-	nlm
+	classic_nlm
+	bin_nlm_1
 )
 foreach (aux ${TARGETS})
  add_executable (${aux} ${aux}.c)
