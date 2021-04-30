@@ -120,7 +120,7 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 5;
+    const int radius = 3;
     const int norm = 2;
     const int exclude_center = 0;
     patch_template_t* tpl;
@@ -134,7 +134,7 @@ int main ( int argc, char* argv[] ) {
     extract_patches ( img, tpl );
 
     printf ( "denoising....\n" );
-    const int R = 100;
+    const int R = 20;
     const double h = argc < 3 ? 1.4: atof(argv[2]);
     const double C = -0.5 / ( h * h );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
@@ -158,8 +158,7 @@ int main ( int argc, char* argv[] ) {
                     norm += w;
                 }
             }
-            const int x = ( int ) ( 0.5 + y / norm );
-            set_linear_pixel ( &out, li, x > 0 ? (x < 255 ? x: 255): 0);
+            set_linear_pixel ( &out, li, y/norm < 0.5 ? 0: 1);
         }
 	if (!(i % 100)) {
 	    printf("row %d\n",i);
@@ -168,6 +167,9 @@ int main ( int argc, char* argv[] ) {
 
     printf ( "saving result...\n" );
     snprintf ( ofname, 128, "nlm_%s", fname );
+    // OVERRIDE since writing raw binary type is broken
+    out.info.type = 1;
+    out.info.encoding = PNM_ASCII;
     int res = write_pnm ( ofname, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", ofname );

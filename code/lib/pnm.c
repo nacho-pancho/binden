@@ -71,9 +71,7 @@ image_info_t read_pnm_info ( FILE * fhandle ) {
 
     case 4:
         info.channels = 1;
-        //info.encoding = PNM_BINARY; // BROKEN!
-        info.encoding = PNM_ASCII; // OVERRIDE since binary is broken!	
-	info.type = 1;
+        info.encoding = PNM_BINARY;
         break;
 
     case 2: // ASCII PGM
