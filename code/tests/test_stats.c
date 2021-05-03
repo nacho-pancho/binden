@@ -8,7 +8,6 @@
 #include "stats.h"
 
 int main(int argc, char* argv[]) {
-    char line[1024];
 
     if (argc < 2) { 
         fprintf(stderr,"usage: %s <image>.\n",argv[0]); 
@@ -46,8 +45,6 @@ int main(int argc, char* argv[]) {
     patch_node_t* stats_tree;
     printf("image alphabet size %d\n",img->info.maxval + 1);
     stats_tree = gather_patch_stats(img,img,tpl,NULL,NULL);
-    //line[0] = 0;
-    //print_patch_stats(stats_tree,line);
     printf("number of pixels %d\n",img->info.width*img->info.height);
     summarize_patch_stats(stats_tree,">");
     save_stats("test.stats",stats_tree);
