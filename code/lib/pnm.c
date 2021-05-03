@@ -21,7 +21,7 @@ static int read_sample_8 ( FILE * fhandle );
 //
 //---------------------------------------------------------------------------------------------
 //
-static int read_sample_1 ( FILE * fhandle );
+static int read_sample_1 ( FILE * fhandle, unsigned char * buffer, unsigned char* mask );
 //
 //---------------------------------------------------------------------------------------------
 //
@@ -37,7 +37,7 @@ static int write_sample_8 ( int c, FILE * fhandle );
 //
 //---------------------------------------------------------------------------------------------
 //
-static int write_sample_1 ( int c, FILE * fhandle );
+static int write_sample_1 ( int c, FILE * fhandle, unsigned char * buffer, unsigned char* mask );
 //
 //---------------------------------------------------------------------------------------------
 //
@@ -171,6 +171,7 @@ image_t * read_pnm ( const char * fname ) {
     img->info = info;
     img->pixels = pixels_alloc ( &info );
     read_all ( fhandle, &img->info, img->pixels );
+    fclose(fhandle);
     return img;
 }
 //
@@ -229,23 +230,31 @@ int read_pixels ( FILE * fhandle, const int depth, const int channels, const int
         }
         return RESULT_OK;
     } else { // 1 bit binary
-        read_sample_1 ( NULL ); // reset bit buffer!
-
-        for ( int i = 0 ; i < nsamples ; i++ ) {
-            if ( ( pixels[ i ] = read_sample_1 ( fhandle ) ) == RESULT_ERROR ) {
-                fclose ( fhandle );
-                return RESULT_ERROR;
-            }
-        }
-        return RESULT_OK;
+        fprintf(stderr,"Cannot read single pixels in binary-encoded bi-level images!");
+        return RESULT_ERROR;
     }
 }
 //
 //---------------------------------------------------------------------------------------------
 //
 int read_rows ( FILE * fhandle, const image_info_t * info, const int nrows, pixel_t * pixels ) {
-    const int npixels = nrows * info->width;
-    return read_pixels ( fhandle, info->depth, info->channels, info->encoding, npixels, pixels );
+    if (info->type != 4) {
+        const int npixels = nrows * info->width;        
+        return read_pixels ( fhandle, info->depth, info->channels, info->encoding, npixels, pixels );
+    } else {
+        index_t ncols = info->width;
+        for ( int i = 0, li = 0 ; i < nrows ; i++ ) {
+            unsigned char buffer = 0x00;
+            unsigned char mask   = 0x00;
+            for (int j = 0; j < ncols; ++j, ++li) {
+                if ( ( pixels[ li ] = read_sample_1 ( fhandle, &buffer, &mask ) ) == RESULT_ERROR ) {
+                    fclose ( fhandle );
+                    return RESULT_ERROR;
+                }
+            }
+        }        
+        return RESULT_OK;
+    }
 }
 //
 //---------------------------------------------------------------------------------------------
@@ -289,23 +298,38 @@ int write_pixels ( const int depth, const int channels, const int encoding, cons
         return RESULT_OK;
 
     } else {
-	// BROKEN for PBM type 4!
-        write_sample_1 ( 0, NULL ); // reset bit buffer!
-        for ( int i = 0 ; i < nsamples ; i++ ) {
-            if ( write_sample_1 ( pixels[ i ], fhandle ) == RESULT_ERROR ) {
-                fclose ( fhandle );
-                return RESULT_ERROR;
-            }
-        }
-        return RESULT_OK;
+        fprintf(stderr,"Cannot write single pixels in PNM mode 4.");
+        return RESULT_ERROR;
     }
 }
 //
 //---------------------------------------------------------------------------------------------
 //
 int write_rows ( const image_info_t * info, const int nrows, const pixel_t * pixels, FILE * fhandle ) {
-    const int npixels = nrows * info->width;
-    return write_pixels ( info->depth, info->channels, info->encoding, npixels, pixels, fhandle );
+    if (info->type != 4) {
+        const int npixels = nrows * info->width;
+        return write_pixels ( info->depth, info->channels, info->encoding, npixels, pixels, fhandle );
+    } else {
+        const int ncols = info->width;
+        for ( int i = 0, li = 0 ; i < nrows ; ++i ) {
+            unsigned char buffer = 0x00;
+            unsigned char mask = 0x80;
+            for ( int j = 0 ; j < ncols ; ++j, ++li ) {
+                if ( write_sample_1 ( pixels[ li ], fhandle, &buffer, &mask ) == RESULT_ERROR ) {
+                    fclose ( fhandle );
+                    return RESULT_ERROR;
+                }
+            }            
+            //
+            // flush trailing bits
+            //
+            if (mask != 0x00) {
+                mask = 0x00;
+                write_sample_1(0,fhandle,&buffer,&mask); // note: the bit 0 written here is never actually written to file
+            }
+        }
+        return RESULT_OK;
+    }
 }
 //
 //---------------------------------------------------------------------------------------------
@@ -351,23 +375,16 @@ static int read_sample_8 ( FILE * fhandle ) {
 //
 //---------------------------------------------------------------------------------------------
 //
-static int read_sample_1 ( FILE * fhandle ) { // NOT REENTRANT!
-    static unsigned char buffer = 0x00;
-    static unsigned char mask  = 0x00;
+static int read_sample_1 ( FILE * fhandle, unsigned char* pbuffer, unsigned char* pmask ) { 
     int res;
     unsigned char val;
-    if ( fhandle == NULL ) { // reset buffer
-        buffer = 0x00;
-        mask = 0x00;
-        return 0;
-    }
-    if ( mask == 0 ) {
-        res = fread ( &buffer, 1, 1, fhandle );
+    if ( *pmask == 0 ) {
+        res = fread ( pbuffer, 1, 1, fhandle );
         if ( res != 1 ) return RESULT_ERROR;
-        mask = 0x80;
+        *pmask = 0x80;
     }
-    val = ( buffer & mask ) ? 1 : 0;
-    mask >>= 1; // shift one bit to right
+    val = ( *pbuffer & *pmask ) ? 1 : 0;
+    *pmask >>= 1; // shift one bit to right
     return val;
 }
 //
@@ -399,30 +416,22 @@ static int write_sample_8 ( int c, FILE * fhandle ) {
 //
 //---------------------------------------------------------------------------------------------
 //
-static int write_sample_1 ( int v, FILE * fhandle ) { // NOT REENTRANT
-    static unsigned char buffer = 0x00;
-    static unsigned char mask  = 0x80;
+static int write_sample_1 ( int v, FILE * fhandle, unsigned char* pbuffer, unsigned char* pmask ) { 
     int res;
-    if ( fhandle == NULL ) { // reset buffer
-        buffer = 0x00;
-        mask = 0x80;
-        return 0;
-    }
-    if ( v ) {
-        buffer |= mask;
-    }
-    mask >>= 1;
-    if ( mask == 0 ) { // set up for new pack of 8 bits
-        if ( ( res = fputc ( buffer, fhandle ) ) == EOF ) {
+    if ( *pmask == 0 ) {  // flush the buffer
+        if ( ( res = fputc ( *pbuffer, fhandle ) ) == EOF ) {
             return RESULT_ERROR;
         }
-        mask = 0x80;
-        buffer = 0x00;
-        return RESULT_OK;
+        *pmask = 0x80;
+        *pbuffer = 0x00;
     }
-    else {
-        return RESULT_OK;
+    // write bit
+    if ( v ) {
+        *pbuffer |= *pmask;
     }
+    // advance buffer
+    *pmask >>= 1;
+    return RESULT_OK;
 }
 //
 //---------------------------------------------------------------------------------------------

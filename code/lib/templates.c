@@ -285,6 +285,8 @@ static index_t compare_coords_r ( const void * pa, const void * pb, void * pnorm
 }
 #endif
 
+/*---------------------------------------------------------------------------------------*/
+
 static int compare_coords ( const void * pa, const void * pb ) {
     const coord_t * a = ( coord_t * ) pa;
     const coord_t * b = ( coord_t * ) pb;
@@ -310,6 +312,8 @@ static int compare_coords ( const void * pa, const void * pb ) {
     }
 }
 
+/*---------------------------------------------------------------------------------------*/
+
 patch_template_t * sort_template ( patch_template_t * orig, index_t in_place ) {
     patch_template_t * out;
     if ( in_place ) {
@@ -319,5 +323,21 @@ patch_template_t * sort_template ( patch_template_t * orig, index_t in_place ) {
         memcpy ( out->coords, orig->coords, orig->k * sizeof( coord_t ) );
     }
     qsort ( out->coords, out->k, sizeof( coord_t ), compare_coords );
+    return out;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+patch_template_t * dilate_template ( patch_template_t* in, index_t scale, index_t in_place) {
+    patch_template_t* out;
+    if (in_place) {
+        out = in;
+    } else {
+        out = alloc_patch_template(in->k);
+    }
+    for ( index_t r = 0 ; r < in->k ; r++ ) { 
+        out->coords[r].i *= scale;
+        out->coords[r].j *= scale;
+    }
     return out;
 }

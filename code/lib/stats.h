@@ -2,25 +2,16 @@
 #define STATS_H
 #include "patches.h"
 
+#define ALPHA 2
 /**
  * Tree structure to efficiently store and search for patches
  */
 typedef struct patch_node {
     index_t occu; // number of occurences of this node
     char leaf;  // 1 if this node is a leaf
-    struct patch_node * * children;
-    index_t nchildren;
-    index_t counts;
+    struct patch_node* children[ALPHA];
+    index_t counts; // number of 1s
 } patch_node_t;
-
-
-/**
- * Linear access to patches
- */
-typedef struct {
-    index_t npatch;
-    patch_node_t** nodes;
-} patch_list_t;
 
 
 void free_node ( patch_node_t * node );
@@ -42,10 +33,17 @@ patch_node_t * gather_patch_stats ( const image_t * pnoisy,
 
 index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
 
+/*---------------------------------------------------------------------------------------*/
 /**
  * Print a patch tree with its counts
  */
 void print_patch_stats ( patch_node_t * pnode, char * prefix );
+
+/*---------------------------------------------------------------------------------------*/
+/**
+ * Print a patch tree with its counts
+ */
+void summarize_patch_stats ( patch_node_t * pnode, const char * prefix );
 
 /*---------------------------------------------------------------------------------------*/
 /**
@@ -58,6 +56,6 @@ patch_node_t * load_stats ( const char * fname );
 /**
  * save stats to custom formatted file
  */
-void save_stats ( const char * fname, const patch_node_t * stats );
+int save_stats ( const char * fname, const patch_node_t * stats );
 
 #endif
