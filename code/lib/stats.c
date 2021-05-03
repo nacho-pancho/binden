@@ -371,3 +371,38 @@ patch_node_t * load_stats ( const char * fname ) {
     fclose(handle);
     return ptree;
 }
+
+/*---------------------------------------------------------------------------------------*/
+
+patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src,
+    const int in_place ) {
+    printf("merge stats\n");
+    if ( !in_place ) {
+        patch_node_t* out;
+        out = create_inner_node();
+        merge_stats(out,src,1);
+        merge_stats(out,dest,1);
+        return out;
+    }
+    //
+    // merge node
+    //
+    printf("merge nodes\n");
+    dest->leaf    = src->leaf;
+    dest->occu   += src->occu;
+    dest->counts += src->counts;
+    if (!src->leaf) {
+        // recursive merge
+        for (int i = 0; i < ALPHA; ++i) {
+            // children does not exist in src
+            if (src->children[i] == NULL) 
+                continue;
+            // node exists in src but not in dest: create
+            if (dest->children[i] == NULL) {
+                dest->children[i] = create_inner_node();
+            }
+            merge_stats(dest->children[i],src->children[i],1); // in place, of course
+        }
+    }
+    return dest;
+}

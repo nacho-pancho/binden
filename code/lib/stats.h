@@ -58,4 +58,8 @@ patch_node_t * load_stats ( const char * fname );
  */
 int save_stats ( const char * fname, const patch_node_t * stats );
 
+/*---------------------------------------------------------------------------------------*/
+
+patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src, const int in_place );
+
 #endif
