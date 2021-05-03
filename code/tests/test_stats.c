@@ -49,12 +49,17 @@ int main(int argc, char* argv[]) {
     //line[0] = 0;
     //print_patch_stats(stats_tree,line);
     printf("number of pixels %d\n",img->info.width*img->info.height);
-    //summarize_patch_stats(stats_tree,">");
+    summarize_patch_stats(stats_tree,">");
     save_stats("test.stats",stats_tree);
+    patch_node_t* loaded_tree = NULL;
+    loaded_tree = load_stats("test.stats");
+    summarize_patch_stats(loaded_tree,">");
+    save_stats("test2.stats",loaded_tree);
     //
     //
     //
     free_node(stats_tree);
+    free_node(loaded_tree);
     free_patch(pat);
     free_patch_template(tpl);
     pixels_free(img->pixels);

@@ -59,7 +59,6 @@ patch_node_t * gather_patch_stats ( const image_t * pnoisy,
     mctx.values = mctxval;
 
     linear_template_t * ltpl = linearize_template ( ptpl, m, n );
-    const int alph_size = pnoisy->info.maxval + 1;
     if ( ptree == NULL ) {
         ptree = create_inner_node ( );
     }
@@ -233,13 +232,24 @@ const patch_node_t * get_patch_node ( const patch_node_t * ptree, const patch_t 
 index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx ) {
     return get_patch_node ( ptree, pctx )->counts;
 }
+
 /*---------------------------------------------------------------------------------------*/
 
-patch_node_t * load_stats ( const char * fname ) {
-    return NULL;
+#if 0
+
+static int read_bit(FILE* fhandle, unsigned char* pbuffer, unsigned char* pmask) {
+    int res;
+    unsigned char val;
+    if ( *pmask == 0 ) {
+        res = fread ( pbuffer, 1, 1, fhandle );
+        if ( res != 1 ) return -1;
+        *pmask = 0x80;
+    }
+    val = ( *pbuffer & *pmask ) ? 1 : 0;
+    *pmask >>= 1; // shift one bit to right
+    return val;
 }
 
-/*---------------------------------------------------------------------------------------*/
 
 static int write_bit(FILE* fhandle, int bit, unsigned char* pbuffer, unsigned char* pmask) {
     int res;
@@ -258,33 +268,73 @@ static int write_bit(FILE* fhandle, int bit, unsigned char* pbuffer, unsigned ch
     *pmask >>= 1;
     return 0;
 }
+#endif
+
+static index_t read_count(FILE* fhandle) {
+    index_t counts;
+    // sorry, will only work on little-endian machines
+    fread(&counts,sizeof(unsigned char),sizeof(uint64_t), fhandle);
+    return counts;
+}
+
 static int write_count(FILE* handle, index_t counts) {
     uint64_t counts64 = counts;
-    unsigned char* bytes = (unsigned char*) &counts64;
-    // sorry, will only work on little-endian machines
-    for (int i = 0; i < sizeof(uint64_t); ++i) {
-        fputc(bytes[i], handle);
-    }
+    fwrite(&counts64,sizeof(uint64_t),1,handle);
     return 0;
 }
 
-int save_node(FILE* handle, const patch_node_t* node, unsigned char* buffer, unsigned char* mask) {
-    write_bit(handle,node->leaf,buffer,mask);
+static int read_bool(FILE* fhandle) {
+    return fgetc(fhandle) > 0 ? 1: 0;
+}
+
+static int write_bool(FILE* handle, int b) {
+    unsigned char c = b ? 1 : 0;
+    fputc(c,handle);
+    return 0;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+int save_node(FILE* handle, const patch_node_t* node) {
+    write_bool(handle,node->leaf);
     if (node->leaf) {
         write_count(handle,node->occu);
         return write_count(handle,node->counts);
     } else {
         for (int i = 0; i < ALPHA; ++i) {
             if (node->children[i]) {
-                write_bit(handle,1,buffer,mask); // present bit
-                save_node(handle,node->children[i],buffer,mask);
+                write_bool(handle,1); // present bit
+                save_node(handle,node->children[i]);
             } else {
-                write_bit(handle,0,buffer,mask); // not present
+                write_bool(handle,0); // not present
             }
         }
     }
     return 0;
 }
+
+/*---------------------------------------------------------------------------------------*/
+
+int read_node(FILE* handle, patch_node_t* node) {
+    node->leaf = read_bool(handle);
+    if (node->leaf) {
+        node->occu   = read_count(handle);
+        node->counts = read_count(handle);
+    } else {
+        for (int i = 0; i < ALPHA; ++i) {
+            int has_child = read_bool(handle);
+            if (has_child) {
+                node->children[i] = create_inner_node();
+                read_node(handle,node->children[i]);
+            } else {
+                node->children[i] = NULL;
+            }
+        }
+    }
+    return 0;
+}
+
+/*---------------------------------------------------------------------------------------*/
 
 int save_stats ( const char * fname, const patch_node_t * ptree ) {
     //
@@ -303,12 +353,21 @@ int save_stats ( const char * fname, const patch_node_t * ptree ) {
         fprintf(stderr,"Error writing stats file %s.",fname);
         return -1;
     }
-    unsigned char buffer = 0x00;
-    unsigned char mask   = 0x80;
-    save_node(handle,ptree,&buffer,&mask);
-    // flush byte buffer
-    mask = 0;
-    write_bit(handle,0,&buffer,&mask);
+    save_node(handle,ptree);
     fclose(handle);
     return 0;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+patch_node_t * load_stats ( const char * fname ) {
+    FILE* handle = fopen(fname,"rb");
+    if (!handle) {
+        fprintf(stderr,"Error opening stats file %s.",fname);
+        return NULL;
+    }
+    patch_node_t* ptree = create_inner_node();
+    read_node(handle,ptree);
+    fclose(handle);
+    return ptree;
 }
