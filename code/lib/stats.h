@@ -54,7 +54,7 @@ void print_patch_stats ( patch_node_t * pnode, char * prefix );
 
 /*---------------------------------------------------------------------------------------*/
 
-void summarize_stats(patch_node_t * pnode, index_t* nleaves, index_t* maxoccu, index_t* maxcount, index_t* totcount);
+void summarize_stats(patch_node_t * pnode, index_t* nleaves, index_t* totoccu, index_t* totcount);
 
 /*---------------------------------------------------------------------------------------*/
 

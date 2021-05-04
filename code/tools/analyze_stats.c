@@ -31,13 +31,16 @@ static int compare_nodes_occu(const void* va, const void* vb) {
     return res > 0 ? 1: (res < 0 ? -1: 0);
 }
 
-static void print_node_list(patch_node_t** node_list, const index_t nnodes, patch_t* aux ) {
+static void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totcount, patch_t* aux ) {
     for (int i = 0; i < nnodes; ++i) {
         get_leaf_patch(aux,node_list[i]);
         for (int j = 0; j < aux->k; ++j) {
             putchar('0'+aux->values[j]);
         }
-        printf(" | %12ld\n", node_list[i]->occu);
+        const patch_node_t* p = node_list[i];
+        const double P = ((double) p->counts) / ((double) p->occu);
+        const double Q = ((double) p->occu) / ((double) totcount);
+        printf(" | %12ld | %12.10f | %12ld | %12.10f\n", p->occu, Q, p->counts, P);
     }
 }
 /**
@@ -125,8 +128,8 @@ int main(int argc, char **argv) {
     //
     // scan 
     //
-    index_t nleaves = 0, maxoccu = 0, maxcount = 0, totcount = 0;
-    summarize_stats(stats_tree,&nleaves,&maxoccu,&maxcount,&totcount);
+    index_t nleaves = 0, totoccu = 0, totcount = 0;
+    summarize_stats(stats_tree,&nleaves,&totoccu,&totcount);
     //
     // allocate analysis structure
     //
@@ -141,7 +144,7 @@ int main(int argc, char **argv) {
     printf("sorting list\n");
     qsort(node_list,nleaves,sizeof(patch_node_t*),compare_nodes_occu);
     printf("printing list\n");
-    print_node_list(node_list,nleaves,aux);
+    print_node_list(node_list,nleaves,totoccu,aux);
     //
     // cleanup and go
     //

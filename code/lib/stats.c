@@ -160,21 +160,16 @@ void print_patch_stats ( patch_node_t * pnode, char * prefix ) {
 /*---------------------------------------------------------------------------------------*/
 
 
-void summarize_stats(patch_node_t * pnode, index_t* nleaves, index_t* maxoccu, index_t* maxcount, index_t* totcount) {
+void summarize_stats(patch_node_t * pnode, index_t* nleaves,  index_t* totoccu, index_t* totcount) {
     if ( pnode->leaf ) {
         (*nleaves) ++;
         *totcount += pnode->counts;
-        if ( pnode->counts > *maxcount) {
-            *maxcount = pnode->counts;
-        }
-        if ( pnode->occu > *maxoccu) {
-            *maxoccu = pnode->occu;
-        }
+        *totoccu += pnode->occu;
     } else {
         int i;
         for ( i = 0 ; i < ALPHA ; ++i ) {
             if ( pnode->children[ i ] )  {
-                summarize_stats( pnode->children[ i ], nleaves, maxoccu, maxcount, totcount );
+                summarize_stats( pnode->children[ i ], nleaves, totoccu, totcount );
             }
         }
     }
@@ -196,14 +191,13 @@ static void _summarize_step_2(patch_node_t * pnode, index_t* count_counts) {
 
 void print_stats_summary ( patch_node_t * pnode, const char* prefix ) {
     index_t nleaves   = 0;
-    index_t maxoccu  = 0;
-    index_t maxcount  = 0;
+    index_t totoccu  = 0;
     index_t totcount  = 0;
     //
     //
     //
-    summarize_stats(pnode,&nleaves,&maxoccu,&maxcount,&totcount);
-    printf("%s leaves %10ld maxoccu %10ld maxcount %10ld totcount %10ld\n",prefix,nleaves,maxoccu,maxcount,totcount);
+    summarize_stats(pnode,&nleaves,&totoccu,&totcount);
+    printf("%s leaves %10ld totoccu %10ld totcount %10ld\n",prefix,nleaves,totoccu,totcount);
     //
     //
     //

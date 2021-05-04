@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "stdio.h": "c",
-        "paco_log.h": "c"
+        "paco_log.h": "c",
+        "bitset": "c"
     }
 }
