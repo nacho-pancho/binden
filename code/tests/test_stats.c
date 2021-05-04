@@ -46,20 +46,20 @@ int main(int argc, char* argv[]) {
     printf("image alphabet size %d\n",img->info.maxval + 1);
     stats_tree = gather_patch_stats(img,img,tpl,NULL,NULL);
     printf("number of pixels %d\n",img->info.width*img->info.height);
-    summarize_patch_stats(stats_tree,">");
+    print_stats_summary(stats_tree,">");
     save_stats("test.stats",stats_tree);
     patch_node_t* loaded_tree = NULL;
     loaded_tree = load_stats("test.stats");
-    summarize_patch_stats(loaded_tree,">");
+    print_stats_summary(loaded_tree,">");
     save_stats("test2.stats",loaded_tree);
     // merge in place
     merge_stats(loaded_tree,stats_tree,1);
-    summarize_patch_stats(loaded_tree,">");
+    print_stats_summary(loaded_tree,">");
     patch_node_t* merged_tree = merge_stats(loaded_tree,stats_tree,0); // not in place
     //
     // should yield everything doubled
     //
-    summarize_patch_stats(merged_tree,">");
+    print_stats_summary(merged_tree,">");
     free_node(merged_tree);
     free_node(stats_tree);
     free_node(loaded_tree);

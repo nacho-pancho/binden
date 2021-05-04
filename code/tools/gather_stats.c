@@ -126,7 +126,7 @@ int main(int argc, char **argv) {
         }
         // update stats
         stats_tree = gather_patch_stats(img,img,template,NULL,stats_tree);
-        summarize_patch_stats(stats_tree,">");
+        print_stats_summary(stats_tree,">");
         pixels_free(img->pixels);
         free(img);
         nimg ++;

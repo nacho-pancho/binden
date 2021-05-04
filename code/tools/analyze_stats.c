@@ -9,10 +9,37 @@
 #include <time.h>                     // basic benchmarking
 #include <argp.h>                     // argument parsing
 #include <string.h>
+#include <assert.h>
 
 #include "stats.h"                 
 #include "logging.h"
+#include "patches.h"
 
+void scan_tree(patch_node_t* node, patch_node_t** node_list, index_t* pos) {
+    if (node->leaf) {
+        node_list[(*pos)++] = node;
+    } else {
+        for (int i = 0; i < ALPHA; ++i)
+            scan_tree(node->children[i],node_list,pos);
+    }
+}
+
+static int compare_nodes_occu(const void* va, const void* vb) {
+    const patch_node_t* a = *((const patch_node_t**) va);
+    const patch_node_t* b = *((const patch_node_t**) vb);
+    const long res = (a->occu - b->occu);
+    return res > 0 ? 1: (res < 0 ? -1: 0);
+}
+
+static void print_node_list(patch_node_t** node_list, const index_t nnodes, patch_t* aux ) {
+    for (int i = 0; i < nnodes; ++i) {
+        get_leaf_patch(aux,node_list[i]);
+        for (int j = 0; j < aux->k; ++j) {
+            putchar('0'+aux->values[j]);
+        }
+        printf(" | %12ld\n", node_list[i]->occu);
+    }
+}
 /**
  * These are the options that we can handle through the command line
  */
@@ -88,13 +115,39 @@ int main(int argc, char **argv) {
     sort_template(template,1);
     print_template(template);
     /*
-     * run stuff
+     * load stats
      */
     patch_node_t* stats_tree = load_stats(cfg.stats_file);
     if (!stats_tree) {
         error("Could not open file %s for reading.\n",cfg.stats_file);
         exit(1);
     }
+    //
+    // scan 
+    //
+    index_t nleaves = 0, maxoccu = 0, maxcount = 0, totcount = 0;
+    summarize_stats(stats_tree,&nleaves,&maxoccu,&maxcount,&totcount);
+    //
+    // allocate analysis structure
+    //
+    index_t pos = 0;
+    patch_node_t** node_list = (patch_node_t**) calloc(nleaves,sizeof(patch_node_t*));
+    scan_tree(stats_tree,node_list,&pos);
+    printf(" pos %ld nleaves %ld\n",pos,nleaves);
+    if (nleaves != pos) {
+        exit(1);
+    }
+    patch_t* aux = alloc_patch(template->k);
+    printf("sorting list\n");
+    qsort(node_list,nleaves,sizeof(patch_node_t*),compare_nodes_occu);
+    printf("printing list\n");
+    print_node_list(node_list,nleaves,aux);
+    //
+    // cleanup and go
+    //
+    printf("cleanup\n");
+    free_patch(aux);
+    free(node_list);
     free_patch_template(template);
     free_stats(stats_tree);
     t1 = clock();

@@ -7,12 +7,18 @@
  * Tree structure to efficiently store and search for patches
  */
 typedef struct patch_node {
-    index_t occu; // number of occurences of this node
-    char leaf;  // 1 if this node is a leaf
     struct patch_node* children[ALPHA];
+    struct patch_node* parent; 
+    pixel_t value; // patch sample value corresponding to this node
+    index_t occu; // number of occurences of this node
     index_t counts; // number of 1s
+    char leaf;  // 1 if this node is a leaf
 } patch_node_t;
 
+
+/**
+ * Flat structure to efficiently store and search for patches
+ */
 
 void free_node ( patch_node_t * node );
 
@@ -34,16 +40,28 @@ patch_node_t * gather_patch_stats ( const image_t * pnoisy,
 index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
 
 /*---------------------------------------------------------------------------------------*/
+
+/**
+ * fill target patch with the samples corresponding to the specified leaf
+ */ 
+void get_leaf_patch ( patch_t * pctx, const patch_node_t * leaf );
+
+/*---------------------------------------------------------------------------------------*/
 /**
  * Print a patch tree with its counts
  */
 void print_patch_stats ( patch_node_t * pnode, char * prefix );
 
 /*---------------------------------------------------------------------------------------*/
+
+void summarize_stats(patch_node_t * pnode, index_t* nleaves, index_t* maxoccu, index_t* maxcount, index_t* totcount);
+
+/*---------------------------------------------------------------------------------------*/
+
 /**
  * Print a patch tree with its counts
  */
-void summarize_patch_stats ( patch_node_t * pnode, const char * prefix );
+void print_stats_summary ( patch_node_t * pnode, const char * prefix );
 
 /*---------------------------------------------------------------------------------------*/
 /**
@@ -66,6 +84,5 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src, const
 
 void free_stats ( patch_node_t * pnode );
 
-/*---------------------------------------------------------------------------------------*/
 
 #endif

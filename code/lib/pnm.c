@@ -47,6 +47,9 @@ static int write_sample_ascii ( int c, FILE * fhandle );
 // main interface
 //---------------------------------------------------------------------------------------------
 //
+static size_t bytes_written = 0; // for debugging
+static size_t bytes_read = 0; // for debugging
+
 //
 //---------------------------------------------------------------------------------------------
 //
@@ -104,17 +107,17 @@ image_info_t read_pnm_info ( FILE * fhandle ) {
         info.result = RESULT_ERROR;
         return info;
     }
-    if ( ( res = fscanf ( fhandle, " %d ", &info.height ) ) <= 0 ) {
+    if ( ( res = fscanf ( fhandle, " %d", &info.height ) ) <= 0 ) {
         fprintf ( stderr, "pnm: error reading image height.\n" );
         info.result = RESULT_ERROR;
         return info;
     }
-    if ( ( res = skip_comments ( fhandle ) ) != RESULT_OK ) {
-        fprintf ( stderr, "pnm: error skipping comments (after dimensins).\n" );
-        info.result = RESULT_ERROR;
-        return info;
-    }
     if ( ( info.type != 1 ) && ( info.type != 4 ) ) {
+        if ( ( res = skip_comments ( fhandle ) ) != RESULT_OK ) {
+            fprintf ( stderr, "pnm: error skipping comments (after dimensins).\n" );
+            info.result = RESULT_ERROR;
+            return info;
+        }
         if ( ( res = fscanf ( fhandle, " %d ", &info.maxval ) ) <= 0 ) {
             fprintf ( stderr, "pnm: error reading maxval.\n" );
             info.result = RESULT_ERROR;
@@ -188,10 +191,12 @@ int write_pnm ( const char * fname, const image_t * img ) {
         return RESULT_ERROR;
     }
     if ( ( res = write_pnm_info ( &img->info, fhandle ) ) == RESULT_ERROR ) {
+        fprintf ( stderr, "pnm: error writing header on file %s.\n", fname );
         fclose ( fhandle );
         return RESULT_ERROR;
     }
     if ( ( res = write_all ( &img->info, img->pixels, fhandle ) ) == RESULT_ERROR ) {
+        fprintf ( stderr, "pnm: error writing data on file %s.\n", fname );
         fclose ( fhandle );
         return RESULT_ERROR;
     }
@@ -248,10 +253,12 @@ int read_rows ( FILE * fhandle, const image_info_t * info, const int nrows, pixe
             unsigned char mask   = 0x00;
             for (int j = 0; j < ncols; ++j, ++li) {
                 if ( ( pixels[ li ] = read_sample_1 ( fhandle, &buffer, &mask ) ) == RESULT_ERROR ) {
+                    fprintf(stderr,"error reading PBM row %d col %d\n",i,j);                    
                     return RESULT_ERROR;
                 }
             }
         }        
+        printf("read %lu bytes\n",bytes_read);
         return RESULT_OK;
     }
 }
@@ -318,11 +325,12 @@ int write_rows ( const image_info_t * info, const int nrows, const pixel_t * pix
             //
             // flush trailing bits
             //
-            if (mask != 0x00) {
-                mask = 0x00;
-                write_sample_1(0,fhandle,&buffer,&mask); // note: the bit 0 written here is never actually written to file
+            if (mask != 0x80) { // there are bits in the buffer
+                fputc(buffer,fhandle);
+                bytes_written++;
             }
         }
+        printf("wrote %lu bytes\n",bytes_written);
         return RESULT_OK;
     }
 }
@@ -376,6 +384,7 @@ static int read_sample_1 ( FILE * fhandle, unsigned char* pbuffer, unsigned char
     if ( *pmask == 0 ) {
         res = fread ( pbuffer, 1, 1, fhandle );
         if ( res != 1 ) return RESULT_ERROR;
+        bytes_read++;
         *pmask = 0x80;
     }
     val = ( *pbuffer & *pmask ) ? 1 : 0;
@@ -413,19 +422,20 @@ static int write_sample_8 ( int c, FILE * fhandle ) {
 //
 static int write_sample_1 ( int v, FILE * fhandle, unsigned char* pbuffer, unsigned char* pmask ) { 
     int res;
-    if ( *pmask == 0 ) {  // flush the buffer
-        if ( ( res = fputc ( *pbuffer, fhandle ) ) == EOF ) {
-            return RESULT_ERROR;
-        }
-        *pmask = 0x80;
-        *pbuffer = 0x00;
-    }
     // write bit
     if ( v ) {
         *pbuffer |= *pmask;
     }
     // advance buffer
     *pmask >>= 1;
+    if ( *pmask == 0 ) {  // write if buffer is full
+        if ( ( res = fputc ( *pbuffer, fhandle ) ) == EOF ) {
+            return RESULT_ERROR;
+        }
+        bytes_written++;
+        *pmask = 0x80;
+        *pbuffer = 0x00;
+    }
     return RESULT_OK;
 }
 //

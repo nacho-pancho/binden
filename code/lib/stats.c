@@ -1,14 +1,68 @@
-#include "stats.h"
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
 
-static patch_node_t * create_inner_node (); 
-
-static patch_node_t * create_leaf_node (); 
+#include "stats.h"
+#include "logging.h"
 
 static const patch_node_t * get_patch_node ( const patch_node_t * ptree, const patch_t * ppatch ); 
 
+/*---------------------------------------------------------------------------------------*/
+static patch_node_t * alloc_node ( ) {
+    patch_node_t* pnode =  ( patch_node_t * ) calloc ( 1, sizeof( patch_node_t ) );
+    if ( !pnode ) {
+        fprintf ( stderr, "Out of memory." );
+    }
+    return pnode;
+}
+
+/*---------------------------------------------------------------------------------------*/
+static patch_node_t * create_node ( patch_node_t* parent, const pixel_t val, char is_leaf ) {
+    patch_node_t * pnode = alloc_node();
+    pnode->parent = parent;
+    pnode->value = val;
+    pnode->leaf = is_leaf;
+    return pnode;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+static patch_node_t * create_inner_node ( patch_node_t* parent, const pixel_t val ) {
+    return create_node(parent,val,0);
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+static patch_node_t * create_leaf_node ( patch_node_t* parent, const pixel_t val ) {
+    return create_node(parent,val,1);
+}
+
+/*---------------------------------------------------------------------------------------*/
+void free_node ( patch_node_t * pnode ) {
+    if ( pnode != NULL ) {
+        if ( !pnode->leaf ) { // inner node
+            if ( pnode->children != NULL ) {
+                int i;
+                patch_node_t** ch = pnode->children;
+                for ( i = 0 ; i < ALPHA ; ++i ) {
+                    if (ch[i] != NULL) {
+                        free_node ( ch[ i ] );
+                        ch[ i ] = NULL;
+                    }
+                }
+                //free ( pnode->children );
+                //pnode->children = NULL;
+            }
+        }
+        free ( pnode );
+    }
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void free_stats ( patch_node_t * pnode ) {
+    free_node(pnode);
+}
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -25,9 +79,9 @@ void update_patch_stats ( const patch_t * pctx, const pixel_t z, patch_node_t * 
         nnode = pnode->children[ cj ];
         if ( nnode == NULL ) {
             if ( j < ( k - 1 ) )
-                nnode = pnode->children[ cj ] = create_inner_node ();
+                nnode = pnode->children[ cj ] = create_inner_node (pnode, cj);
             else { // is a leaf.
-                nnode = pnode->children[ cj ] = create_leaf_node ();
+                nnode = pnode->children[ cj ] = create_leaf_node (pnode, cj);
             }
         }
         pnode = nnode;
@@ -60,7 +114,7 @@ patch_node_t * gather_patch_stats ( const image_t * pnoisy,
 
     linear_template_t * ltpl = linearize_template ( ptpl, m, n );
     if ( ptree == NULL ) {
-        ptree = create_inner_node ( );
+        ptree = alloc_node ( );
     }
     for ( i = 0 ; i <  m ; ++i ) {
         //if (!(i % 500)) printf("%7d/%7d, #ctx=%ld avgcounts=%ld\n",i,m,num_ctx,(i*n+1)/(num_ctx+1));
@@ -106,7 +160,7 @@ void print_patch_stats ( patch_node_t * pnode, char * prefix ) {
 /*---------------------------------------------------------------------------------------*/
 
 
-static void _summarize_step_1(patch_node_t * pnode, index_t* nleaves, index_t* maxoccu, index_t* maxcount, index_t* totcount) {
+void summarize_stats(patch_node_t * pnode, index_t* nleaves, index_t* maxoccu, index_t* maxcount, index_t* totcount) {
     if ( pnode->leaf ) {
         (*nleaves) ++;
         *totcount += pnode->counts;
@@ -120,12 +174,12 @@ static void _summarize_step_1(patch_node_t * pnode, index_t* nleaves, index_t* m
         int i;
         for ( i = 0 ; i < ALPHA ; ++i ) {
             if ( pnode->children[ i ] )  {
-                _summarize_step_1( pnode->children[ i ], nleaves, maxoccu, maxcount, totcount );
+                summarize_stats( pnode->children[ i ], nleaves, maxoccu, maxcount, totcount );
             }
         }
     }
 }
-
+#if 0
 static void _summarize_step_2(patch_node_t * pnode, index_t* count_counts) {
     if ( pnode->leaf ) {
         count_counts[ pnode->counts ] ++;
@@ -138,8 +192,9 @@ static void _summarize_step_2(patch_node_t * pnode, index_t* count_counts) {
         }
     }
 }
+#endif
 
-void summarize_patch_stats ( patch_node_t * pnode, const char* prefix ) {
+void print_stats_summary ( patch_node_t * pnode, const char* prefix ) {
     index_t nleaves   = 0;
     index_t maxoccu  = 0;
     index_t maxcount  = 0;
@@ -147,7 +202,7 @@ void summarize_patch_stats ( patch_node_t * pnode, const char* prefix ) {
     //
     //
     //
-    _summarize_step_1(pnode,&nleaves,&maxoccu,&maxcount,&totcount);
+    summarize_stats(pnode,&nleaves,&maxoccu,&maxcount,&totcount);
     printf("%s leaves %10ld maxoccu %10ld maxcount %10ld totcount %10ld\n",prefix,nleaves,maxoccu,maxcount,totcount);
     //
     //
@@ -165,55 +220,16 @@ void summarize_patch_stats ( patch_node_t * pnode, const char* prefix ) {
 
 /*---------------------------------------------------------------------------------------*/
 
-patch_node_t * create_inner_node () {
-    patch_node_t * pnode = ( patch_node_t * ) calloc ( 1, sizeof( patch_node_t ) );
-    if ( !pnode ) {
-        fprintf ( stderr, "Out of memory." );
-    }
-    pnode->leaf = 0;
-    //memset(pnode->children,0,sizeof(patch_node_t*)*ALPHA);
-    return pnode;
-}
-
-/*---------------------------------------------------------------------------------------*/
-
-patch_node_t * create_leaf_node ( ) {
-    patch_node_t * pnode = ( patch_node_t * ) calloc ( 1, sizeof( patch_node_t ) );
-    if ( !pnode ) {
-        fprintf ( stderr, "Out of memory." );
-    }
-    pnode->leaf = 1;    
-    return pnode;
-}
-
-/*---------------------------------------------------------------------------------------*/
-void free_node ( patch_node_t * pnode ) {
-    if ( pnode != NULL ) {
-        if ( !pnode->leaf ) { // inner node
-            if ( pnode->children != NULL ) {
-                int i;
-                patch_node_t** ch = pnode->children;
-                for ( i = 0 ; i < ALPHA ; ++i ) {
-                    if (ch[i] != NULL) {
-                        free_node ( ch[ i ] );
-                        ch[ i ] = NULL;
-                    }
-                }
-                //free ( pnode->children );
-                //pnode->children = NULL;
-            }
-        }
-        free ( pnode );
+void get_leaf_patch ( patch_t * pctx, const patch_node_t * leaf ) {
+    assert(leaf->leaf); // must be a leaf
+    const patch_node_t* node = leaf;
+    for (int j = pctx->k-1; j >= 0; --j) {
+        //printf("j %d\n",j);
+        assert(node != NULL);
+        pctx->values[j] = node->value;
+        node = node->parent;
     }
 }
-
-/*---------------------------------------------------------------------------------------*/
-
-void free_stats ( patch_node_t * pnode ) {
-    free_node(pnode);
-}
-
-
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -281,7 +297,11 @@ static int write_bit(FILE* fhandle, int bit, unsigned char* pbuffer, unsigned ch
 static index_t read_count(FILE* fhandle) {
     index_t counts;
     // sorry, will only work on little-endian machines
-    fread(&counts,sizeof(unsigned char),sizeof(uint64_t), fhandle);
+    size_t res = fread(&counts,sizeof(unsigned char),sizeof(uint64_t), fhandle);
+    if (res <  sizeof(uint64_t)) {
+        error("error reading stats!");
+        return 0;
+    }
     return counts;
 }
 
@@ -332,7 +352,7 @@ int read_node(FILE* handle, patch_node_t* node) {
         for (int i = 0; i < ALPHA; ++i) {
             int has_child = read_bool(handle);
             if (has_child) {
-                node->children[i] = create_inner_node();
+                node->children[i] = create_inner_node( node, i );
                 read_node(handle,node->children[i]);
             } else {
                 node->children[i] = NULL;
@@ -374,7 +394,7 @@ patch_node_t * load_stats ( const char * fname ) {
         fprintf(stderr,"Error opening stats file %s.",fname);
         return NULL;
     }
-    patch_node_t* ptree = create_inner_node();
+    patch_node_t* ptree = alloc_node();
     read_node(handle,ptree);
     fclose(handle);
     return ptree;
@@ -387,7 +407,7 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src,
     printf("merge stats\n");
     if ( !in_place ) {
         patch_node_t* out;
-        out = create_inner_node();
+        out = alloc_node();
         merge_stats(out,src,1);
         merge_stats(out,dest,1);
         return out;
@@ -399,6 +419,7 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src,
     dest->leaf    = src->leaf;
     dest->occu   += src->occu;
     dest->counts += src->counts;
+    dest->value   = src->value;
     if (!src->leaf) {
         // recursive merge
         for (int i = 0; i < ALPHA; ++i) {
@@ -407,10 +428,11 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src,
                 continue;
             // node exists in src but not in dest: create
             if (dest->children[i] == NULL) {
-                dest->children[i] = create_inner_node();
+                dest->children[i] = create_node(dest,i,0);
             }
             merge_stats(dest->children[i],src->children[i],1); // in place, of course
         }
     }
     return dest;
 }
+
