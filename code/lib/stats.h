@@ -62,4 +62,10 @@ int save_stats ( const char * fname, const patch_node_t * stats );
 
 patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src, const int in_place );
 
+/*---------------------------------------------------------------------------------------*/
+
+void free_stats ( patch_node_t * pnode );
+
+/*---------------------------------------------------------------------------------------*/
+
 #endif

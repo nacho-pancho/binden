@@ -1,5 +1,6 @@
 set(TOOLS 
 	gather_stats
+	analyze_stats
 )
 foreach (aux ${TOOLS})
  add_executable (${aux} ${aux}.c)

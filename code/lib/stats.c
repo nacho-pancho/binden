@@ -152,6 +152,7 @@ void summarize_patch_stats ( patch_node_t * pnode, const char* prefix ) {
     //
     //
     //
+#if 0
     index_t* count_counts = (index_t*)  calloc( (maxcount+1), sizeof(index_t) );
     _summarize_step_2(pnode, count_counts);
     for (index_t i = 0; i < maxcount+1; ++i) {
@@ -159,6 +160,7 @@ void summarize_patch_stats ( patch_node_t * pnode, const char* prefix ) {
             printf("%s%10ld:%10ld\n",prefix,i,count_counts[i]);
     }
     free(count_counts);
+#endif
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -203,6 +205,12 @@ void free_node ( patch_node_t * pnode ) {
         }
         free ( pnode );
     }
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void free_stats ( patch_node_t * pnode ) {
+    free_node(pnode);
 }
 
 

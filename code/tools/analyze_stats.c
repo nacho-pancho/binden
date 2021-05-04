@@ -10,10 +10,8 @@
 #include <argp.h>                     // argument parsing
 #include <string.h>
 
-#include "templates.h"
 #include "stats.h"                 
 #include "logging.h"
-#include "pnm.h"
 
 /**
  * These are the options that we can handle through the command line
@@ -21,8 +19,6 @@
 static struct argp_option options[] = {
     {"verbose",        'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output",0 },
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output",0 },
-    {"prefix",         'p', "path", 0,            "Prefix to append to file paths",0 },
-    {"stats",          's', "file", 0,             "Path to stats file. If it exists, merge with it.",0 },
     { 0 } // terminator
 };
 
@@ -30,10 +26,8 @@ static struct argp_option options[] = {
  * Program options. These are filled in by the argument parser
  */
 typedef struct  {
-    char *file_list_file;  
-    char *prefix;   
-    char *template_file; 
     char *stats_file;   
+    char *template_file; 
 } config_st; 
 
 /**
@@ -50,7 +44,7 @@ static char program_doc[] =
 /**
  * A general description of the input arguments we accept; appears when calling with --help
  */
-static char args_doc[] = "[OPTIONS] <FILE_LIST> <TEMPLATE_FILE>";
+static char args_doc[] = "<STATS_FILE> <TEMPLATE_FILE>";
 
 /**
  * argp configuration structure
@@ -72,9 +66,7 @@ int main(int argc, char **argv) {
      */
     set_log_level(LOG_INFO);
     set_log_stream(stdout);
-    cfg.prefix = ".";
-    cfg.stats_file = "patch.stats";
-    cfg.file_list_file = NULL;
+    cfg.stats_file = NULL;
     cfg.template_file = NULL; 
     info("Parsing arguments...\n");
     /*
@@ -98,56 +90,13 @@ int main(int argc, char **argv) {
     /*
      * run stuff
      */
-    FILE* flist = fopen(cfg.file_list_file,"r");
-    if (!flist) {
-        error("could not open file %s for reading\n.",cfg.file_list_file);
+    patch_node_t* stats_tree = load_stats(cfg.stats_file);
+    if (!stats_tree) {
+        error("Could not open file %s for reading.\n",cfg.stats_file);
         exit(1);
     }
-    char* line = NULL; // generous
-    size_t n = 0;
-    patch_node_t* stats_tree = NULL;
-    int nimg = 0;
-    while ( getline(&line,&n,flist) > 0 ) {
-        char full_path[1024];
-        // remove trailing and leading spaces from buf                
-        size_t pre = strspn(line,"\n\r \t\b");
-        size_t pos = strcspn(line+pre,"\n\r \t\b");
-        if (strlen(line+pre) > pos) {
-            line[pre+pos] = 0;
-        }
-        // assemble full path
-        snprintf(full_path,1024,"%s/%s",cfg.prefix,line);
-        info("image %d path %s\n",nimg+1,full_path);
-        // read image
-        image_t* img = read_pnm(full_path);
-        if (!img) {
-            warn("Could not read image %s. Skipping\n",full_path);
-            continue;
-        }
-        // update stats
-        stats_tree = gather_patch_stats(img,img,template,NULL,stats_tree);
-        summarize_patch_stats(stats_tree,">");
-        pixels_free(img->pixels);
-        free(img);
-        nimg ++;
-        //z
-        // save checkpoint
-        //         
-        if (!(nimg % 100)) {
-            snprintf(full_path,1024,"%s.checkpoint%07d",cfg.stats_file,nimg);
-            save_stats(full_path,stats_tree);
-        }
-    }
-    /*
-     * save results
-     */
-    save_stats(cfg.stats_file,stats_tree);
-    /*
-     * finish
-     */
     free_patch_template(template);
     free_stats(stats_tree);
-    free(line);
     t1 = clock();
     printf("Took %ld seconds.\n",t1-t0);
     exit (0);
@@ -169,17 +118,11 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
     case 'v':
         set_log_level(LOG_DEBUG);
         break;
-    case 'p':
-        cfg->prefix = arg;
-        break;
-    case 's':
-        cfg->stats_file = arg;
-        break;
 
     case ARGP_KEY_ARG:
         switch (state->arg_num) {
         case 0:
-            cfg->file_list_file = arg;
+            cfg->stats_file = arg;
             break;
         case 1:
             cfg->template_file = arg;
