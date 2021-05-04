@@ -58,7 +58,6 @@ image_info_t read_pnm_info ( FILE * fhandle ) {
     int res;
     if ( fgetc ( fhandle ) != 'P' ) {
         fprintf ( stderr, "pnm: this is not a PNM file.\n" );
-        fclose ( fhandle );
         info.result = RESULT_ERROR;
         return info;
     }
@@ -170,7 +169,11 @@ image_t * read_pnm ( const char * fname ) {
 
     img->info = info;
     img->pixels = pixels_alloc ( &info );
-    read_all ( fhandle, &img->info, img->pixels );
+    if (read_all ( fhandle, &img->info, img->pixels ) != RESULT_OK) {
+        fprintf( stderr, "pnm: error while reading pixels.\n");
+    	fclose(fhandle);
+    	return NULL;
+    }
     fclose(fhandle);
     return img;
 }
@@ -204,7 +207,6 @@ int read_pixels ( FILE * fhandle, const int depth, const int channels, const int
 
         for ( int i = 0 ; i < nsamples ; i++ ) {
             if ( ( pixels[ i ] = read_sample_ascii ( fhandle ) ) == RESULT_ERROR ) {
-                fclose ( fhandle );
                 return RESULT_ERROR;
             }
         }
@@ -214,7 +216,6 @@ int read_pixels ( FILE * fhandle, const int depth, const int channels, const int
 
         for ( int i = 0 ; i < nsamples ; i++ ) {
             if ( ( pixels[ i ] = read_sample_16 ( fhandle ) ) == RESULT_ERROR ) {
-                fclose ( fhandle );
                 return RESULT_ERROR;
             }
         }
@@ -224,7 +225,6 @@ int read_pixels ( FILE * fhandle, const int depth, const int channels, const int
 
         for ( int i = 0 ; i < nsamples ; i++ ) {
             if ( ( pixels[ i ] = read_sample_8 ( fhandle ) ) == RESULT_ERROR ) {
-                fclose ( fhandle );
                 return RESULT_ERROR;
             }
         }
@@ -248,7 +248,6 @@ int read_rows ( FILE * fhandle, const image_info_t * info, const int nrows, pixe
             unsigned char mask   = 0x00;
             for (int j = 0; j < ncols; ++j, ++li) {
                 if ( ( pixels[ li ] = read_sample_1 ( fhandle, &buffer, &mask ) ) == RESULT_ERROR ) {
-                    fclose ( fhandle );
                     return RESULT_ERROR;
                 }
             }
@@ -271,7 +270,6 @@ int write_pixels ( const int depth, const int channels, const int encoding, cons
 
         for ( int i = 0 ; i < nsamples ; i++ ) {
             if ( write_sample_ascii ( pixels[ i ], fhandle ) == RESULT_ERROR ) {
-                fclose ( fhandle );
                 return RESULT_ERROR;
             }
         }
@@ -281,7 +279,6 @@ int write_pixels ( const int depth, const int channels, const int encoding, cons
 
         for ( int i = 0 ; i < nsamples ; i++ ) {
             if ( write_sample_16 ( pixels[ i ], fhandle ) == RESULT_ERROR ) {
-                fclose ( fhandle );
                 return RESULT_ERROR;
             }
         }
@@ -291,7 +288,6 @@ int write_pixels ( const int depth, const int channels, const int encoding, cons
 
         for ( int i = 0 ; i < nsamples ; i++ ) {
             if ( write_sample_8 ( pixels[ i ], fhandle ) == RESULT_ERROR ) {
-                fclose ( fhandle );
                 return RESULT_ERROR;
             }
         }
@@ -316,7 +312,6 @@ int write_rows ( const image_info_t * info, const int nrows, const pixel_t * pix
             unsigned char mask = 0x80;
             for ( int j = 0 ; j < ncols ; ++j, ++li ) {
                 if ( write_sample_1 ( pixels[ li ], fhandle, &buffer, &mask ) == RESULT_ERROR ) {
-                    fclose ( fhandle );
                     return RESULT_ERROR;
                 }
             }            
