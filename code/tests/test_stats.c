@@ -31,14 +31,12 @@ int main(int argc, char* argv[]) {
     //
     // create template  
     //
-    const int radius = 3;
-    const int norm = 2;
+    const int radius = 2;
+    const int norm = 1;
     const int exclude_center = 1;
     patch_template_t* tpl;
-    patch_t* pat;
     
     tpl = generate_ball_template(radius,norm,exclude_center);
-    pat = alloc_patch(tpl->k);
     //
     // coordinate access
     //
@@ -60,10 +58,48 @@ int main(int argc, char* argv[]) {
     // should yield everything doubled
     //
     print_stats_summary(merged_tree,">");
+    //
+    // find neighbors
+    //
+    // by default, a patch is initialized to all-zeros    
+    patch_t* center;    
+    center = alloc_patch(tpl->k);
+    const index_t maxd = 2;
+    const index_t maxn = 256; // combinations: 16*15 ~ 256
+    neighbor_list_t neighbors = find_neighbors ( stats_tree, center, maxd, maxn);
+    for (int i = 0; i < neighbors.number; ++i) {
+        get_leaf_patch(center,neighbors.neighbors[i].patch_node);
+        printf("dist %02ld ",neighbors.neighbors[i].dist);
+        print_binary_patch(center);        
+    }
+    //
+    // merge nodes with distance <= 2
+    //
+    printf("before merge\n");
+    char line[1024];
+    line[0] = 0;
+    print_patch_stats(stats_tree,line);
+    for (int i = 0; i < center->k; ++i)
+        center->values[i] = 0;
+    patch_node_t* dest = get_patch_node(stats_tree, center);
+    for (int i = 0; i < neighbors.number; ++i) {
+        if (neighbors.neighbors[i].dist > 0) {
+            patch_node_t* src = neighbors.neighbors[i].patch_node;            
+            merge_nodes(dest,src);
+        }
+    }
+    //
+    // merge nodes
+    //
+    printf("after merge\n");
+    line[0] = 0;
+    print_patch_stats(stats_tree,line);
+
+    free(neighbors.neighbors);
     free_node(merged_tree);
     free_node(stats_tree);
     free_node(loaded_tree);
-    free_patch(pat);
+    free_patch(center);
     free_patch_template(tpl);
     pixels_free(img->pixels);
     free(img);

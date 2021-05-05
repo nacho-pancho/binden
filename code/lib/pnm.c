@@ -352,11 +352,12 @@ static int skip_comments ( FILE * fp ) {
     while ( ( ch = fgetc ( fp ) ) != EOF && isspace ( ch ) )
         ;
     if ( ch == '#' ) {
-        fgets ( line, sizeof( line ), fp );
+        if (fgets ( line, sizeof( line ), fp ) == NULL)
+            return RESULT_ERROR;
         skip_comments ( fp );
     } else
         fseek ( fp, -1, SEEK_CUR );
-    return 0;
+    return RESULT_OK;
 }
 //
 //---------------------------------------------------------------------------------------------

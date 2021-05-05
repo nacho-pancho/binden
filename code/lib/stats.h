@@ -16,11 +16,26 @@ typedef struct patch_node {
 } patch_node_t;
 
 
+typedef struct neighbor {
+    patch_node_t* patch_node;
+    index_t dist;
+} neighbor_t;
+
+
+typedef struct neighbor_list {
+    neighbor_t* neighbors;
+    index_t number;
+} neighbor_list_t;
+
 /**
  * Flat structure to efficiently store and search for patches
  */
 
 void free_node ( patch_node_t * node );
+
+void delete_node ( patch_node_t * node);
+
+void merge_nodes ( patch_node_t * dest, patch_node_t* src);
 
 /*
  * Gather patch statistics from an image, given a template
@@ -42,8 +57,19 @@ index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
 
 /*---------------------------------------------------------------------------------------*/
 
-index_t find_neighbors ( const patch_node_t * ptree, const patch_t * center, 
-    const index_t maxdist, const index_t maxneigbors, patch_node_t* neighbors );
+patch_node_t* get_patch_node ( patch_node_t * ptree, patch_t * pctx );
+
+/*---------------------------------------------------------------------------------------*/
+
+const patch_node_t* get_patch_node_const ( const patch_node_t * ptree, const patch_t * pctx );
+
+/*---------------------------------------------------------------------------------------*/
+
+neighbor_list_t find_neighbors ( 
+    patch_node_t* ptree, 
+    const patch_t* center, 
+    const index_t maxd, 
+    const index_t maxn);
 
 /*---------------------------------------------------------------------------------------*/
 

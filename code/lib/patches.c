@@ -12,7 +12,7 @@
 
 patch_t * alloc_patch ( int k ) {
     patch_t * p = ( patch_t * ) malloc ( sizeof( patch_t ) );
-    p->values = ( pixel_t * ) malloc ( sizeof( pixel_t ) * k );
+    p->values = ( pixel_t * ) calloc ( k, sizeof( pixel_t ) );
     p->k = k;
     return p;
 }
@@ -81,6 +81,15 @@ void print_patch ( const patch_t * pctx ) {
     printf ( "]\n" );
 }
 
+
+void print_binary_patch ( const patch_t * pctx ) {
+    int j;
+    printf ( "[ " );
+    for ( j = 0 ; j < pctx->k ; j++ ) {
+        fputc( pctx->values[ j ] ?'1':'0', stdout);
+    }
+    printf ( " ]\n" );
+}
 
 
 /*---------------------------------------------------------------------------------------*/

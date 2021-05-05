@@ -5,7 +5,6 @@
 #include "stats.h"
 #include "logging.h"
 
-static const patch_node_t * get_patch_node ( const patch_node_t * ptree, const patch_t * ppatch ); 
 
 /*---------------------------------------------------------------------------------------*/
 static patch_node_t * alloc_node ( ) {
@@ -17,6 +16,7 @@ static patch_node_t * alloc_node ( ) {
 }
 
 /*---------------------------------------------------------------------------------------*/
+
 static patch_node_t * create_node ( patch_node_t* parent, const pixel_t val, char is_leaf ) {
     patch_node_t * pnode = alloc_node();
     pnode->parent = parent;
@@ -40,6 +40,9 @@ static patch_node_t * create_leaf_node ( patch_node_t* parent, const pixel_t val
 /*---------------------------------------------------------------------------------------*/
 void free_node ( patch_node_t * pnode ) {
     if ( pnode != NULL ) {
+        //
+        // delete subtree
+        //
         if ( !pnode->leaf ) { // inner node
             if ( pnode->children != NULL ) {
                 int i;
@@ -53,9 +56,35 @@ void free_node ( patch_node_t * pnode ) {
                 //free ( pnode->children );
                 //pnode->children = NULL;
             }
-        }
-        free ( pnode );
+        } 
+        free(pnode);
     }
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void delete_node ( patch_node_t * node) {
+    patch_node_t* parent = node->parent;
+    pixel_t val = node->value;
+    free(node); 
+    if (parent != NULL) {
+        parent->children[val] = NULL; // remove from parent
+        for (int i = 0; i < ALPHA; ++i) {
+            if (parent->children[i] != NULL) {
+                return; // don't kill me! I have kids!
+            }
+        }
+        // say goodbye!
+        delete_node(parent);
+    }
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void merge_nodes ( patch_node_t * dest, patch_node_t* src) {
+    dest->occu += src->occu;
+    dest->counts += src->counts;
+    delete_node(src);
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -201,36 +230,73 @@ void print_stats_summary ( patch_node_t * pnode, const char* prefix ) {
     //
     //
     //
-#if 0
-    index_t* count_counts = (index_t*)  calloc( (maxcount+1), sizeof(index_t) );
-    _summarize_step_2(pnode, count_counts);
-    for (index_t i = 0; i < maxcount+1; ++i) {
-        if (count_counts[i])
-            printf("%s%10ld:%10ld\n",prefix,i,count_counts[i]);
-    }
-    free(count_counts);
-#endif
 }
+
 
 /**
  * return a list of all the patches that are a given distance to the
  * specified center 
  */
-index_t find_neighbors ( patch_node_t * ptree, const patch_t * center, 
-    const index_t maxdist, const index_t maxneighbors, patch_node_t** neighbors ) {
-    if (ptree->leaf && (maxneighbors > 0)) {
-        *neighbors = ptree;
-        return 1;
+static void find_neighbors_inner ( 
+    neighbor_list_t* nlist, 
+    const index_t dist, 
+    patch_node_t * ptree, 
+    const patch_t * center, 
+    const index_t patch_pos,   
+    const index_t maxd, 
+    const index_t maxn ) {
+    //printf("find_neighbors_inner pos %ld size %d ctr %d dist %ld maxd %ld neigh %ld maxn %ld\n",
+    //    patch_pos, center->k, center->values[patch_pos], dist, maxd, nlist->number, maxn);
+    //
+    // list is full
+    //
+    if (nlist->number >= maxn) {
+        return;
+    }
+    if (ptree->leaf) {
+        //
+        // we arrived at a neighbor
+        //
+        //printf("leaf.\n");
+        nlist->neighbors[nlist->number].patch_node = ptree;
+        nlist->neighbors[nlist->number++].dist = dist;
+        return;
     } else {
-        patch_node_t** top = neighbors;
+        //printf("node.\n");
+        //
+        // inner node: see if we've got budget to go
+        //
         for (int i = 0; i < ALPHA; ++i) {
-            //if (i == center[0])
-            //find_neighbors(ptree->children[0]);
+            // next node's value coincides with next position
+            // so distance is not increased
+            if (!ptree->children[i]) {
+                continue;
+            }
+            const pixel_t val = center->values[patch_pos];
+            const index_t downdist = (i == val) ? dist: (dist+1);
+            if (downdist > maxd) 
+                return;
+            find_neighbors_inner(nlist, downdist, ptree->children[i],center,patch_pos+1,maxd,maxn);
         }
     }
-    return 0;
+    // note: we could speed this up by adding a whole subtree if its depth is
+    // lower than the max distance.
 }
 
+neighbor_list_t find_neighbors ( 
+    patch_node_t* ptree, 
+    const patch_t* center, 
+    const index_t maxd, 
+    const index_t maxn) {
+
+    neighbor_list_t neighbors;
+    neighbors.number = 0;
+    neighbors.neighbors = (neighbor_t*) malloc(sizeof(neighbor_t)*maxn);
+    const index_t ini_dist = 0;
+    const index_t ini_pos  = 0;
+    find_neighbors_inner (&neighbors, ini_dist, ptree,  center, ini_pos, maxd, maxn);
+    return neighbors;
+}
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -247,28 +313,30 @@ void get_leaf_patch ( patch_t * pctx, const patch_node_t * leaf ) {
 
 /*---------------------------------------------------------------------------------------*/
 
-const patch_node_t * get_patch_node ( const patch_node_t * ptree, const patch_t * pctx ) {
-    const patch_node_t * pnode = ptree, * nnode = NULL;
+patch_node_t * get_patch_node ( patch_node_t * ptree, patch_t * pctx ) {
+    patch_node_t * pnode = ptree;
     const int k = pctx->k;
     const pixel_t * const cv = pctx->values;
     register int j;
     for ( j = 0 ; j < k ; ++j ) {
         const pixel_t cj = cv[ j ];
-        nnode = pnode->children[ cj ];
-        if ( nnode == NULL ) {
+        pnode = pnode->children[ cj ];
+        if ( pnode == NULL ) {
             fprintf ( stderr, "Error: patch node not found at depth=%d c[j]=%d\n", j, cj );
             return NULL;
         }
-        pnode = nnode;
     }
-    // this one is always a leaf, and the contents of the node are the average
     return pnode;
+}
+
+const patch_node_t * get_patch_node_const ( const patch_node_t * ptree, const patch_t * pctx ) {
+    return get_patch_node ((patch_node_t*) ptree, (patch_t*) pctx);
 }
 
 /*---------------------------------------------------------------------------------------*/
 
 index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx ) {
-    return get_patch_node ( ptree, pctx )->counts;
+    return get_patch_node_const ( ptree, pctx )->counts;
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -418,7 +486,7 @@ patch_node_t * load_stats ( const char * fname ) {
 
 patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src,
     const int in_place ) {
-    printf("merge stats\n");
+    //printf("merge stats\n");
     if ( !in_place ) {
         patch_node_t* out;
         out = alloc_node();
@@ -429,7 +497,7 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src,
     //
     // merge node
     //
-    printf("merge nodes\n");
+    //printf("merge nodes\n");
     dest->leaf    = src->leaf;
     dest->occu   += src->occu;
     dest->counts += src->counts;
