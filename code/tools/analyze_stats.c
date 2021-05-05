@@ -24,23 +24,29 @@ void scan_tree(patch_node_t* node, patch_node_t** node_list, index_t* pos) {
     }
 }
 
+int ascending = 0;
+
 static int compare_nodes_occu(const void* va, const void* vb) {
     const patch_node_t* a = *((const patch_node_t**) va);
     const patch_node_t* b = *((const patch_node_t**) vb);
-    const long res = (a->occu - b->occu);
+    const long res = ascending ? (a->occu - b->occu) : (b->occu - a->occu);
     return res > 0 ? 1: (res < 0 ? -1: 0);
 }
 
-static void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totcount, patch_t* aux ) {
+static void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totoccu, patch_t* aux ) {
+    index_t accu = 0;
     for (int i = 0; i < nnodes; ++i) {
+        printf("%06d | ",i);
         get_leaf_patch(aux,node_list[i]);
         for (int j = 0; j < aux->k; ++j) {
             putchar('0'+aux->values[j]);
         }
         const patch_node_t* p = node_list[i];
         const double P = ((double) p->counts) / ((double) p->occu);
-        const double Q = ((double) p->occu) / ((double) totcount);
-        printf(" | %12ld | %12.10f | %12ld | %12.10f\n", p->occu, Q, p->counts, P);
+        const double Q = ((double) p->occu) / ((double) totoccu);
+        accu += p->occu;
+        const double F = ((double) accu) / ((double) totoccu);
+        printf(" | %12ld | %12.10f | %12.10f | %12ld | %12.10f\n", p->occu, Q, F, p->counts, P);
     }
 }
 /**

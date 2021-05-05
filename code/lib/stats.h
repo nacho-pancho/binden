@@ -36,8 +36,14 @@ patch_node_t * gather_patch_stats ( const image_t * pnoisy,
                                     patch_mapper_t mapper,
                                     patch_node_t * ptree );
 
+/*---------------------------------------------------------------------------------------*/
 
 index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
+
+/*---------------------------------------------------------------------------------------*/
+
+index_t find_neighbors ( const patch_node_t * ptree, const patch_t * center, 
+    const index_t maxdist, const index_t maxneigbors, patch_node_t* neighbors );
 
 /*---------------------------------------------------------------------------------------*/
 

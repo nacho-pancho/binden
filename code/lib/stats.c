@@ -212,6 +212,26 @@ void print_stats_summary ( patch_node_t * pnode, const char* prefix ) {
 #endif
 }
 
+/**
+ * return a list of all the patches that are a given distance to the
+ * specified center 
+ */
+index_t find_neighbors ( patch_node_t * ptree, const patch_t * center, 
+    const index_t maxdist, const index_t maxneighbors, patch_node_t** neighbors ) {
+    if (ptree->leaf && (maxneighbors > 0)) {
+        *neighbors = ptree;
+        return 1;
+    } else {
+        patch_node_t** top = neighbors;
+        for (int i = 0; i < ALPHA; ++i) {
+            //if (i == center[0])
+            //find_neighbors(ptree->children[0]);
+        }
+    }
+    return 0;
+}
+
+
 /*---------------------------------------------------------------------------------------*/
 
 void get_leaf_patch ( patch_t * pctx, const patch_node_t * leaf ) {
