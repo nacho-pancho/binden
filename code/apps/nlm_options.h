@@ -6,7 +6,7 @@
 /**
  * Program options. These are filled in by the argument parser
  */
-typedef struct  {
+typedef struct nlm_config {
     const char *input_file;
     const char *output_file;
     int template_radius;
@@ -16,6 +16,7 @@ typedef struct  {
     int search_radius;
     int max_dist;
     double perr;
+    int decay;
 } nlm_config_t; 
 
 nlm_config_t parse_opt(int argc, char** argv );

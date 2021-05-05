@@ -16,6 +16,7 @@ static struct argp_option options[] = {
     {"maxdist",        'd', "integer", 0    , "output file",0 },
     {"perr",           'p', "probability", 0, "output file",0 },
     {"search",         'R', "radius",  0    , "output file",0 },
+    {"decay",         'w', "rate",  0    , "weight decay as function of distance",0 },
     { 0 } // terminator
 };
 
@@ -52,7 +53,7 @@ nlm_config_t parse_opt(int argc, char** argv ) {
     cfg.search_radius = 40;
     cfg.max_dist = 10;
     cfg.perr = 0.1;
-
+    cfg.decay = 1;
     argp_parse (&argp, argc, argv, 0, 0, &cfg);
     
     return cfg;
@@ -93,6 +94,9 @@ static error_t _parse_opt (int key, char *arg, struct argp_state *state) {
         break;
     case 'p':
         cfg->perr = atof(arg);
+        break;
+    case 'w':
+        cfg->decay = atoi(arg);
         break;
     case 'R':
         cfg->search_radius= atoi(arg);

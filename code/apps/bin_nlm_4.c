@@ -96,7 +96,8 @@ index_t apply_denoiser(image_t* out, const image_t* img,
 
     index_t w[maxd];
     for (index_t d = 0; d < maxd; ++d) {
-        w[d] = 1024/(d+1);
+        w[d] = 1024/((d>>cfg->decay)+1);
+	printf("dist %d weight %d\n",d,w[d]);
     }
     
     const int m = img->info.height;
