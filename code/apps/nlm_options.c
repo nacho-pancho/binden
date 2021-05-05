@@ -8,14 +8,14 @@
 static struct argp_option options[] = {
     {"verbose",        'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output",0 },
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output",0 },
-    {"output",         'o', 0, 0                  , "output file",0 },
-    {"tradius",        'r', 0, 0                  , "radius of the template ball",0 },
-    {"tnorm",          'n', 0, 0                  , "norm of the template ball.",0 },
-    {"tscale",         's', 0, 0                  , "scale of the template ball.",0 },
-    {"tcenter",        'c', 0, 0                  , "include center in template.",0 },
-    {"maxdist",        'd', 0, 0                  , "output file",0 },
-    {"perr",           'p', 0, 0                  , "output file",0 },
-    {"search",         'R', 0, 0                  , "output file",0 },
+    {"output",         'o', "file",    0    , "output file",0 },
+    {"tradius",        'r', "radius",  0    , "radius of the template ball",0 },
+    {"tnorm",          'n', "norm",    0    , "norm of the template ball.",0 },
+    {"tscale",         's', "integer", 0    , "scale of the template ball.",0 },
+    {"tcenter",        'c', "bool",    0    , "include center in template.",0 },
+    {"maxdist",        'd', "integer", 0    , "output file",0 },
+    {"perr",           'p', "probability", 0, "output file",0 },
+    {"search",         'R', "radius",  0    , "output file",0 },
     { 0 } // terminator
 };
 

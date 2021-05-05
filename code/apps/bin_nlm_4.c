@@ -136,8 +136,8 @@ index_t apply_denoiser(image_t* out, const image_t* img,
                 oned++;
             }
         }
-        if (!(i % 100)) {
-            printf("row %d changed %ld to 0 and %ld to 1\n",i,zeroed,oned);
+        if (!(i % 50)) {
+            printf("| %6d | 1->0 %8ld | 0->1 %8ld |\n",i,zeroed,oned);
         }
     }
     return zeroed+oned;
