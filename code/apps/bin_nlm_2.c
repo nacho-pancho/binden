@@ -1,8 +1,6 @@
 /**
  * binarized non-local means
- * the patches are binarized and compared as bit fields
- * the weights are still Gaussian
- * the center values, however, are treated as signed integers
+ * the patches are stored in a tree structure
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,75 +13,8 @@
 #include "patches.h"
 #include "patch_mapper.h"
 #include "bitfun.h"
+#include "stats.h"
 
-upixel_t* all_patches;
-
-upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
-    //
-    // determine total number of patches in image
-    //
-    const index_t n = img->info.width;
-    const index_t m = img->info.height;
-    const index_t npatches = m * n;
-    const size_t ki = tpl->k;
-    const size_t ko = compute_binary_mapping_samples ( ki );
-    printf ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
-    all_patches = ( upixel_t* ) malloc ( ko * npatches * sizeof( upixel_t ) );
-    patch_t* p = alloc_patch ( ki );
-    patch_t* q = alloc_patch ( ko );
-    linear_template_t* ltpl = linearize_template ( tpl, m, n );
-    for ( int i = 0, li = 0 ; i < m ; ++i ) {
-        for ( int j = 0 ; j < n ; ++j, ++li ) {
-            get_linear_patch ( img, ltpl, i, j, p );
-            //
-            // binarize
-            //
-            binary_patch_mapper ( p, q );
-            // copy raw bytes: this bypasses sign, which is good for us
-            memcpy ( all_patches + li * ko, q->values, ko * sizeof( upixel_t ) );
-#ifdef INSANE_DEBUG
-            printf("i %d j %d patch:",i,j);
-            for (int kk = 0; kk < ko; kk++) {
-                printf("%x ",*(all_patches + li*ko + kk));
-            }
-            printf("\n");
-#endif
-        }
-    }
-    free_linear_template ( ltpl );
-    free_patch ( q );
-    free_patch ( p );
-    return all_patches;
-}
-
-/**
- * the distance between two patches is computed as the number of different
- * bits between their binary representations.
- * we must handle raw bytes and conver them to the appropriate sizes
- */
-int patch_dist (const index_t i, const index_t j, const patch_template_t* tpl ) {
-    const index_t nsamples = compute_binary_mapping_samples ( tpl->k );
-    const upixel_t* samplesi = &all_patches[ nsamples * i ];
-    const upixel_t* samplesj = &all_patches[ nsamples * j ];
-#ifdef INSANE_DEBUG
-    printf("dist: patch %d:",i);
-    for (int kk = 0; kk < nsamples; kk++) {
-        printf("%x ", samplesi[kk] );
-    }
-    printf("\n");
-    printf("dist: patch %d:",j);
-    for (int kk = 0; kk < nsamples; kk++) {
-        printf("%x ",samplesj[kk] );
-    }
-    printf("\n");
-#endif
-    int d = 0;
-    for ( index_t k = 0 ; k < nsamples ; ++k ) {
-        upixel_t bdif = samplesi[ k ] ^ samplesj[ k ];
-        d += block_weight ( bdif );
-    }
-    return d;
-}
 
 int main ( int argc, char* argv[] ) {
     char ofname[ 128 ];
@@ -122,7 +53,14 @@ int main ( int argc, char* argv[] ) {
     //
     const int radius = 3;
     const int norm = 2;
-    const int exclude_center = 0;
+    const int exclude_center = 1;
+    const index_t maxd = 4;
+    const index_t maxn = 1<<20; // 1M
+    index_t w[maxd];
+    for (index_t d = 0; d < maxd; ++d) {
+        w[d] = 1024/(d+1);
+    }
+
     patch_template_t* tpl;
 
     tpl = generate_ball_template ( radius, norm, exclude_center );
@@ -131,38 +69,39 @@ int main ( int argc, char* argv[] ) {
     // search a window of size R
     //
     printf ( "extracting patches....\n" );
-    extract_patches ( img, tpl );
+    patch_node_t* stats = gather_patch_stats(img,img,tpl,NULL,NULL);
 
     printf ( "denoising....\n" );
-    const int R = 20;
-    const double h = argc < 3 ? 1.4: atof(argv[2]);
-    const double C = -0.5 / ( h * h );
+
+    patch_t* Pij = alloc_patch(tpl->k);
+    index_t changed = 0;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
-            //const pixel_t z = get_linear_pixel ( img, li );
-            double y = 0.0;
-            double norm = 0;
-            int di0 = i > R     ? i - R : 0;
-            int di1 = i < ( m - R ) ? i + R : m;
-            int dj0 = j > R     ? j - R : 0;
-            int dj1 = j < ( n - R ) ? j + R : n;
-            for ( int di = di0 ; di < di1 ; ++di ) {
-                for ( int dj = dj0 ; dj < dj1 ; ++dj ) {
-                    const index_t lj = di*n + dj;
-                    const int d = patch_dist (li, lj, tpl );
-                    const double w = exp ( C * d );
-#ifdef INSANE_DEBUG
-                    printf("d %d w %f\n",d, w);
-#endif                
-                    y += w * (get_pixel ( img, di, dj ));                    
-                    norm += w;
-                }
+            get_patch(img,tpl,i,j,Pij);
+            index_t y = 0;
+            index_t norm = 0;
+            neighbor_list_t neighbors = find_neighbors ( stats, Pij, maxd, maxn);
+            for (int i = 0; i < neighbors.number; ++i) {
+                const index_t d = neighbors.neighbors[i].dist;
+                if (d == 0) continue;
+                const patch_node_t* node = neighbors.neighbors[i].patch_node;
+                const double avg_val = (0.5 + (double) node->counts) / ((double) node->occu + 1.0);
+                //const double w = 1.0/d; // exp ( C * d );
+                y += w[d-1]*avg_val;
+                norm += w[d-1];
             }
-            set_linear_pixel ( &out, li, y/norm < 0.5 ? 0: 1);
+            //printf("%f %f %f\n",y, norm, y/norm);
+            free(neighbors.neighbors);
+            const pixel_t z = get_linear_pixel(img, li);
+            const pixel_t x = 2*y > norm ? 1: 0;
+            if (x != z) {
+                set_linear_pixel ( &out, li,  x);
+                changed++;
+            }
         }
-	if (!(i % 100)) {
-	    printf("row %d\n",i);
-	}
+        if ((i > 0) &&!(i % 100)) {
+            printf("row %d changed %d\n",i,changed);
+        }
     }
 
     printf ( "saving result...\n" );
@@ -177,7 +116,7 @@ int main ( int argc, char* argv[] ) {
 
 
     printf ( "finishing...\n" );
-    free ( all_patches );
+    free_node(stats);
     free_patch_template ( tpl );
     pixels_free ( img->pixels );
     pixels_free ( out.pixels );
