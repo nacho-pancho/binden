@@ -62,10 +62,10 @@ int main(int argc, char* argv[]) {
     // find neighbors
     //
     // by default, a patch is initialized to all-zeros    
+    printf("neighbors:\n");
     patch_t* center;    
     center = alloc_patch(tpl->k);
     const index_t maxd = 2;
-    const index_t maxn = 256; // combinations: 16*15 ~ 256
     neighbor_list_t neighbors = find_neighbors ( stats_tree, center, maxd);
     for (int i = 0; i < neighbors.number; ++i) {
         get_leaf_patch(center,neighbors.neighbors[i].patch_node);

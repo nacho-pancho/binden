@@ -19,8 +19,11 @@ void scan_tree(patch_node_t* node, patch_node_t** node_list, index_t* pos) {
     if (node->leaf) {
         node_list[(*pos)++] = node;
     } else {
-        for (int i = 0; i < ALPHA; ++i)
-            scan_tree(node->children[i],node_list,pos);
+        for (int i = 0; i < ALPHA; ++i) {
+            if (node->children[i]) {
+                scan_tree(node->children[i],node_list,pos);
+            }
+        }
     }
 }
 
@@ -154,7 +157,7 @@ int main(int argc, char **argv) {
     free(node_list);
     
     printf("clusters\n");
-    patch_node_t * clustered = cluster_stats ( stats_tree, template->k, 5);    
+    patch_node_t * clustered = cluster_stats ( stats_tree, template->k, 4);    
 
     char line[1024];
     line[0] = 0;
@@ -164,15 +167,18 @@ int main(int argc, char **argv) {
     printf("summary\n");
     summarize_stats(clustered,&nleaves,&totoccu,&totcount);
     printf("nleaves %ld totoccu %ld totcount %ld\n",nleaves,totoccu,totcount);
-    printf("scan\n");
     node_list = (patch_node_t**) calloc(nleaves,sizeof(patch_node_t*));
+    printf("scan\n");
     pos = 0;
     scan_tree(clustered,node_list,&pos);
     print_node_list(node_list,nleaves,totoccu,aux);
+
+    test_stats_iter(template->k,clustered);
     //
     // cleanup and go
     //
     printf("cleanup\n");
+    free_node(clustered);
     free_patch(aux);
     free(node_list);
     free_patch_template(template);

@@ -81,6 +81,114 @@ void delete_node ( patch_node_t * node) {
 
 /*---------------------------------------------------------------------------------------*/
 
+typedef struct stats_iter {
+    patch_node_t* node;
+    patch_t* patch;    
+    index_t depth;
+} stats_iter_t;
+
+static stats_iter_t* stats_iter_create(index_t k) {
+    stats_iter_t* iter = (stats_iter_t*) calloc(1,sizeof(stats_iter_t));
+    iter->patch = alloc_patch(k);
+    return iter;
+}
+
+static stats_iter_t* stats_iter_begin(stats_iter_t* iter, patch_node_t* ptree) {
+    iter->node = ptree;
+    iter->depth = 0;
+    while (!iter->node->leaf) {
+        for (int i = 0; i < ALPHA; ++i) {
+            if (iter->node->children[i]) {
+                iter->patch->values[iter->depth++] = i;
+                iter->node = iter->node->children[i];
+                break;
+            }
+        }        
+    }
+    if (!iter->node->leaf)
+        iter->node = NULL;
+    return iter;
+}
+
+static stats_iter_t* stats_iter_next(stats_iter_t* iter) {
+    if (iter->node == NULL) {        
+        return NULL;
+    }    
+    if (iter->node->parent == NULL) {
+        iter->node = NULL;
+        return iter; // end of line
+    } 
+    //
+    // go up
+    //
+    pixel_t next_val = ALPHA;
+    patch_node_t* next_node = NULL;
+    while (next_val >= ALPHA) {
+        if (iter->node->parent == NULL) { 
+            // at root, nothing else to do
+            iter->node = NULL; 
+            return iter;
+        } 
+        // look for existing sibling
+        for (next_val = iter->node->value + 1;  next_val < ALPHA; ++next_val) {
+            next_node = iter->node->parent->children[next_val];
+            if (next_node != NULL) {
+                // found one!
+                break;
+            }
+        }
+        if (next_val < ALPHA) { // found one
+            break;
+        }        
+        // didn't find a sibling at this level
+        // go further up
+        iter->node = iter->node->parent;
+        iter->depth--; 
+        //printf("up: depth %ld\n",iter->depth);
+    } 
+    //
+    // go sideways
+    //
+    iter->node = next_node;
+    //printf("sideways: depth %ld next_val %ld child %lx\n",iter->depth,next_val,(unsigned long)iter->node);
+    iter->patch->values[iter->depth-1] = next_val;
+    // 
+    // go down
+    //
+    while (!iter->node->leaf) {
+        for (int i = 0; i < ALPHA; ++i) {
+            if (iter->node->children[i]) {
+                iter->patch->values[iter->depth++] = i;
+                //printf("down: depth %ld\n",iter->depth);
+                iter->node = iter->node->children[i];
+                break;
+            }
+        }        
+    }
+    if (!iter->node->leaf)
+        iter->node = NULL; // invalid!
+    return iter;
+}
+
+void free_stats_iter(stats_iter_t* iter) {
+    free_patch(iter->patch);
+    free(iter);
+}
+
+void test_stats_iter(index_t k, patch_node_t* tree) {
+    stats_iter_t* iter = stats_iter_create(k);
+    stats_iter_begin(iter, tree);
+    index_t i = 0;
+    while (iter->node != NULL) {
+        printf("%06ld %04ld ",i,iter->depth);
+        print_binary_patch(iter->patch);
+        stats_iter_next(iter);
+        i++;
+    }
+    free_stats_iter(iter);
+}
+/*---------------------------------------------------------------------------------------*/
+
 void merge_nodes ( patch_node_t * dest, patch_node_t* src) {
     dest->occu += src->occu;
     dest->counts += src->counts;
@@ -95,7 +203,8 @@ void free_stats ( patch_node_t * pnode ) {
 
 /*---------------------------------------------------------------------------------------*/
 
-void update_patch_stats ( const patch_t * pctx, const pixel_t z, patch_node_t * ptree ) {
+
+static patch_node_t* update_patch_stats ( const patch_t * pctx, const pixel_t z, patch_node_t * ptree ) {
     patch_node_t * pnode = ptree, * nnode = NULL;
     const int k = pctx->k;
     const pixel_t * const cv = pctx->values;
@@ -118,7 +227,9 @@ void update_patch_stats ( const patch_t * pctx, const pixel_t z, patch_node_t * 
     // this one is always a leaf, and the contents of the node are the average
     pnode->occu++;
     pnode->counts += z;
+    return pnode;
 }
+
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -283,6 +394,20 @@ neighbor_list_t find_neighbors (
     const index_t ini_pos  = 0;
     find_neighbors_inner (&neighbors, ini_dist, ptree,  center, ini_pos, maxd);
     return neighbors;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+static int comp_neigh(const void* pa, const void* pb) {
+    const neighbor_t* na = (const neighbor_t*) pa;
+    const neighbor_t* nb = (const neighbor_t*) pb;    
+    return (na->dist - nb->dist);
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+static void sort_neighbors (neighbor_list_t ng) {
+    qsort(ng.neighbors,ng.number,sizeof(neighbor_t),comp_neigh);
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -586,7 +711,6 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
     summarize_stats(work,&nleaves,&noccu,&ncounts);
     patch_t* point = alloc_patch(K);
     patch_t* center = alloc_patch(K);
-    index_t maxoccu = 0;
     //
     // we identify as clusters all those patches
     // which are significantly above the expected number 
@@ -594,5 +718,49 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
     // for uniform noise this is simply total_counts/2^{patch size}
     const index_t thres = noccu >> K;
     printf("threshold %ld\n",thres);
-    return work;
+    stats_iter_t* iter = stats_iter_create(K);
+    stats_iter_begin(iter,work);
+    while (iter->node != NULL) {
+        if (iter->node->occu >= thres) {
+            //
+            // add to clusters
+            //
+            patch_node_t* leaf = update_patch_stats(iter->patch,0,clusters);
+            leaf->occu = iter->node->occu;
+            leaf->counts = iter->node->counts;
+            //
+            // remove from candidates
+            // this invalidates the iterator
+            //
+            delete_node(iter->node);
+            //
+            // restart iterator!
+            //
+            stats_iter_begin(iter,work);
+        } else {
+            stats_iter_next(iter);
+        }
+    }
+    //
+    // now we assign the rest of the patches to the closest one in the cluster centers
+    //
+    stats_iter_begin(iter,work);
+    while (iter->node != NULL) {
+        printf("target patch ");
+        print_binary_patch(iter->patch);
+        neighbor_list_t ng = find_neighbors(clusters,iter->patch,maxd); // maximum distance: may need tuning
+        sort_neighbors(ng);
+        for (int i = 0; i < ng.number; ++i) {
+            get_leaf_patch(point,ng.neighbors[i].patch_node);
+            printf("dist %02ld ",ng.neighbors[i].dist);
+            print_binary_patch(point);
+        }
+        stats_iter_next(iter);
+    }
+
+    free_patch(center);
+    free_patch(point);
+    free_stats_iter(iter);
+    free_node(work);
+    return clusters;
 }
