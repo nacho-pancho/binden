@@ -577,89 +577,22 @@ static void find_most_popular_cand(patch_node_t * pnode, patch_node_t** currnode
     }
 }
 
-patch_node_t * cluster_stats ( patch_node_t* in, const int in_place, const index_t K, const index_t maxd) {
-    patch_node_t* out;
-    if ( !in_place ) {
-        out = clone_stats(in);
-    } else {
-        out = in;
-    }
-    //
-    // clusters are made by selecting the most popular nodes as the centers
-    // and then adding those nodes which are below a given distance to them
-    //
-    // this is done for increasingly large distances, from 1 to maxd
-    //
+patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t maxd) {
+    // working copy; nodes get removed from it
+    patch_node_t* work = clone_stats(in);
+    // clusters are saved here
+    patch_node_t* clusters = create_node(NULL,0,0);
+    index_t nleaves =0, noccu =0, ncounts = 0; 
+    summarize_stats(work,&nleaves,&noccu,&ncounts);
     patch_t* point = alloc_patch(K);
     patch_t* center = alloc_patch(K);
     index_t maxoccu = 0;
-    for (index_t d = 1; d <= maxd; ++d) {
-        printf("distance %ld\n",d);
-        while (1) {
-            patch_node_t* currnode = NULL;
-            index_t currmax = 0;
-            find_most_popular_cand(out,&currnode,&currmax);            
-            if (maxoccu == 0) { // first time: this is the most popular guy
-                maxoccu = currnode->occu;
-		printf("maxoccu %ld\n",maxoccu);
-            }
-            //
-            // if the most popular is not that popular, 
-            // we finish
-	    printf("currocu %ld\n",currnode->occu);	      
-            if (currnode->occu <= (maxoccu/1000)) {
-	      printf("currocu too small (minimum %ld)%ld\n",currnode->occu, maxoccu/1000);	      
-	      break;
-            }
-            //
-            // find neighbors at distance <= d
-            //
-            get_leaf_patch(center,currnode);
-	    printf("candidate:");
-	    print_binary_patch(center);        
-	    
-            neighbor_list_t neighbors = find_neighbors(out,center,d);
-            printf("found %ld neighbors\n",neighbors.number);
-            if ( neighbors.number == 0) {
-                // no neighbors
-                break;
-            } 
-	    for (int i = 0; i < neighbors.number; ++i) {
-	      get_leaf_patch(point,neighbors.neighbors[i].patch_node);
-	      printf("dist %02ld ",neighbors.neighbors[i].dist);
-	      print_binary_patch(point);        
-	    }
-            //
-            // add probabilities to this node (also signals that this was already visited)
-            // and initalize them to 0
-            //
-            currnode->diff = (index_t*) calloc(K,sizeof(index_t));
-            //
-            // merge them with center
-            //
-            for (int j = 0; j < neighbors.number; ++j) {
-                patch_node_t* node = neighbors.neighbors[j].patch_node;
-		printf("neighbor %d %lx\n",j,node);
-                get_leaf_patch(point,node);
-                //
-                // update probabilities 
-                //
-                for (int k = 0; k < K; ++k) {
-                    if (point->values[k] != center->values[k]) {
-                        currnode->diff[k] += node->occu;
-                    }
-                }
-                //
-                // merge node with center
-                // 
-                merge_nodes(currnode,node);
-            }
-            free(neighbors.neighbors);
-        } // neverending while
-    } // for each distance
     //
-    // purge all nodes that were not clustered
-    //
-
-    return out;
+    // we identify as clusters all those patches
+    // which are significantly above the expected number 
+    // of them arising purely by chance
+    // for uniform noise this is simply total_counts/2^{patch size}
+    const index_t thres = noccu >> K;
+    printf("threshold %ld\n",thres);
+    return work;
 }
