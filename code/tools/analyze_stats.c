@@ -154,7 +154,7 @@ int main(int argc, char **argv) {
     free(node_list);
     
     printf("clusters\n");
-    patch_node_t * clustered = cluster_stats ( stats_tree, 0, template->k, 8);    
+    patch_node_t * clustered = cluster_stats ( stats_tree, 1, template->k, 5);    
 
     char line[1024];
     line[0] = 0;

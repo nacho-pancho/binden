@@ -78,8 +78,7 @@ const patch_node_t* get_patch_node_const ( const patch_node_t * ptree, const pat
 neighbor_list_t find_neighbors ( 
     patch_node_t* ptree, 
     const patch_t* center, 
-    const index_t maxd, 
-    const index_t maxn);
+    const index_t maxd);
 
 /*---------------------------------------------------------------------------------------*/
 

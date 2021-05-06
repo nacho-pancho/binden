@@ -231,11 +231,12 @@ static void find_neighbors_inner (
     patch_node_t* ptree, 
     const patch_t* center, 
     const index_t patch_pos,   
-    const index_t maxd, 
-    const index_t maxn ) {
+    const index_t maxd) {
     //printf("find_neighbors_inner pos %ld size %d ctr %d dist %ld maxd %ld neigh %ld maxn %ld\n",
     //    patch_pos, center->k, center->values[patch_pos], dist, maxd, nlist->number, maxn);
     if (ptree->leaf) {
+      // do not inclde center itself
+      if (dist == 0) { return; }
         //
         // we arrived at a neighbor
         //
@@ -261,8 +262,8 @@ static void find_neighbors_inner (
             const pixel_t val = center->values[patch_pos];
             const index_t downdist = (i == val) ? dist: (dist+1);
             if (downdist > maxd) 
-                return;
-            find_neighbors_inner(nlist, downdist, ptree->children[i],center,patch_pos+1,maxd,maxn);
+                continue;
+            find_neighbors_inner(nlist, downdist, ptree->children[i], center, patch_pos+1, maxd);
         }
     }
     // note: we could speed this up by adding a whole subtree if its depth is
@@ -272,16 +273,15 @@ static void find_neighbors_inner (
 neighbor_list_t find_neighbors ( 
     patch_node_t* ptree, 
     const patch_t* center, 
-    const index_t maxd, 
-    const index_t maxn) {
+    const index_t maxd) {
 
     neighbor_list_t neighbors;
     neighbors.number = 0;
     neighbors.maxnumber = 1024; // starting size
-    neighbors.neighbors = (neighbor_t*) malloc(sizeof(neighbor_t)*neighbors.maxnumber);
+    neighbors.neighbors = (neighbor_t*) calloc(neighbors.maxnumber,sizeof(neighbor_t));
     const index_t ini_dist = 0;
     const index_t ini_pos  = 0;
-    find_neighbors_inner (&neighbors, ini_dist, ptree,  center, ini_pos, maxd, maxn);
+    find_neighbors_inner (&neighbors, ini_dist, ptree,  center, ini_pos, maxd);
     return neighbors;
 }
 
@@ -601,33 +601,45 @@ patch_node_t * cluster_stats ( patch_node_t* in, const int in_place, const index
             find_most_popular_cand(out,&currnode,&currmax);            
             if (maxoccu == 0) { // first time: this is the most popular guy
                 maxoccu = currnode->occu;
+		printf("maxoccu %ld\n",maxoccu);
             }
             //
             // if the most popular is not that popular, 
             // we finish
+	    printf("currocu %ld\n",currnode->occu);	      
             if (currnode->occu <= (maxoccu/1000)) {
-                break;
+	      printf("currocu too small (minimum %ld)%ld\n",currnode->occu, maxoccu/1000);	      
+	      break;
             }
+            //
+            // find neighbors at distance <= d
+            //
+            get_leaf_patch(center,currnode);
+	    printf("candidate:");
+	    print_binary_patch(center);        
+	    
+            neighbor_list_t neighbors = find_neighbors(out,center,d);
+            printf("found %ld neighbors\n",neighbors.number);
+            if ( neighbors.number == 0) {
+                // no neighbors
+                break;
+            } 
+	    for (int i = 0; i < neighbors.number; ++i) {
+	      get_leaf_patch(point,neighbors.neighbors[i].patch_node);
+	      printf("dist %02ld ",neighbors.neighbors[i].dist);
+	      print_binary_patch(point);        
+	    }
             //
             // add probabilities to this node (also signals that this was already visited)
             // and initalize them to 0
             //
             currnode->diff = (index_t*) calloc(K,sizeof(index_t));
             //
-            // find neighbors at distance <= d
-            //
-            get_leaf_patch(center,currnode);    
-            neighbor_list_t neighbors = find_neighbors(out,center,d,1<<20);
-            printf("found %ld neighbors\n",neighbors.number);
-            if ( neighbors.number == 0) {
-                // no neighbors
-                break;
-            }
-            //
             // merge them with center
             //
             for (int j = 0; j < neighbors.number; ++j) {
-                patch_node_t* node = neighbors.neighbors[j].patch_node; 
+                patch_node_t* node = neighbors.neighbors[j].patch_node;
+		printf("neighbor %d %lx\n",j,node);
                 get_leaf_patch(point,node);
                 //
                 // update probabilities 
@@ -640,7 +652,7 @@ patch_node_t * cluster_stats ( patch_node_t* in, const int in_place, const index
                 //
                 // merge node with center
                 // 
-                merge_nodes(currnode,neighbors.neighbors[j].patch_node);
+                merge_nodes(currnode,node);
             }
             free(neighbors.neighbors);
         } // neverending while

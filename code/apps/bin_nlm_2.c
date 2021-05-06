@@ -80,7 +80,7 @@ int main ( int argc, char* argv[] ) {
             get_patch(img,tpl,i,j,Pij);
             index_t y = 0;
             index_t norm = 0;
-            neighbor_list_t neighbors = find_neighbors ( stats, Pij, maxd, maxn);
+            neighbor_list_t neighbors = find_neighbors ( stats, Pij, maxd);
             for (int i = 0; i < neighbors.number; ++i) {
                 const index_t d = neighbors.neighbors[i].dist;
                 if (d == 0) continue;

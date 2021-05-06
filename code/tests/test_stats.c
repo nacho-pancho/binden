@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
     center = alloc_patch(tpl->k);
     const index_t maxd = 2;
     const index_t maxn = 256; // combinations: 16*15 ~ 256
-    neighbor_list_t neighbors = find_neighbors ( stats_tree, center, maxd, maxn);
+    neighbor_list_t neighbors = find_neighbors ( stats_tree, center, maxd);
     for (int i = 0; i < neighbors.number; ++i) {
         get_leaf_patch(center,neighbors.neighbors[i].patch_node);
         printf("dist %02ld ",neighbors.neighbors[i].dist);
