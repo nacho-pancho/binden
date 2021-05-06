@@ -151,6 +151,24 @@ int main(int argc, char **argv) {
     qsort(node_list,nleaves,sizeof(patch_node_t*),compare_nodes_occu);
     printf("printing list\n");
     print_node_list(node_list,nleaves,totoccu,aux);
+    free(node_list);
+    
+    printf("clusters\n");
+    patch_node_t * clustered = cluster_stats ( stats_tree, 0, template->k, 8);    
+
+    char line[1024];
+    line[0] = 0;
+    totoccu = 0;
+    totcount = 0;
+    nleaves = 0;
+    printf("summary\n");
+    summarize_stats(clustered,&nleaves,&totoccu,&totcount);
+    printf("nleaves %ld totoccu %ld totcount %ld\n",nleaves,totoccu,totcount);
+    printf("scan\n");
+    node_list = (patch_node_t**) calloc(nleaves,sizeof(patch_node_t*));
+    pos = 0;
+    scan_tree(clustered,node_list,&pos);
+    print_node_list(node_list,nleaves,totoccu,aux);
     //
     // cleanup and go
     //

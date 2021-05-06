@@ -12,6 +12,11 @@ typedef struct patch_node {
     pixel_t value; // patch sample value corresponding to this node
     index_t occu; // number of occurences of this node
     index_t counts; // number of 1s
+    // not null if this is a cluster center: 
+    // each value indicates how many times the corresponding element 
+    // was found to be different from the same value in the center of the cluster
+    // in other points that now belong to this cluster
+    index_t* diff; 
     char leaf;  // 1 if this node is a leaf
 } patch_node_t;
 
@@ -25,6 +30,7 @@ typedef struct neighbor {
 typedef struct neighbor_list {
     neighbor_t* neighbors;
     index_t number;
+    index_t maxnumber;
 } neighbor_list_t;
 
 /**
@@ -36,6 +42,10 @@ void free_node ( patch_node_t * node );
 void delete_node ( patch_node_t * node);
 
 void merge_nodes ( patch_node_t * dest, patch_node_t* src);
+
+void flatten_stats(patch_node_t* node, patch_node_t** node_list, index_t* pos);
+
+void sort_stats(patch_node_t** node_list, index_t nnodes);
 
 /*
  * Gather patch statistics from an image, given a template
@@ -116,5 +126,8 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src, const
 
 void free_stats ( patch_node_t * pnode );
 
+/*---------------------------------------------------------------------------------------*/
+
+patch_node_t * cluster_stats ( patch_node_t* in, const int in_place, const index_t K, const index_t maxd);
 
 #endif

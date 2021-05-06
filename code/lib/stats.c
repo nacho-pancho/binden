@@ -203,20 +203,8 @@ void summarize_stats(patch_node_t * pnode, index_t* nleaves,  index_t* totoccu, 
         }
     }
 }
-#if 0
-static void _summarize_step_2(patch_node_t * pnode, index_t* count_counts) {
-    if ( pnode->leaf ) {
-        count_counts[ pnode->counts ] ++;
-    } else {
-        int i;
-        for ( i = 0 ; i < ALPHA ; ++i ) {
-            if ( pnode->children[ i ] )  {
-                _summarize_step_2( pnode->children[ i ], count_counts );
-            }
-        }
-    }
-}
-#endif
+
+/*---------------------------------------------------------------------------------------*/
 
 void print_stats_summary ( patch_node_t * pnode, const char* prefix ) {
     index_t nleaves   = 0;
@@ -240,29 +228,27 @@ void print_stats_summary ( patch_node_t * pnode, const char* prefix ) {
 static void find_neighbors_inner ( 
     neighbor_list_t* nlist, 
     const index_t dist, 
-    patch_node_t * ptree, 
-    const patch_t * center, 
+    patch_node_t* ptree, 
+    const patch_t* center, 
     const index_t patch_pos,   
     const index_t maxd, 
     const index_t maxn ) {
     //printf("find_neighbors_inner pos %ld size %d ctr %d dist %ld maxd %ld neigh %ld maxn %ld\n",
     //    patch_pos, center->k, center->values[patch_pos], dist, maxd, nlist->number, maxn);
-    //
-    // list is full
-    //
-    if (nlist->number >= maxn) {
-        return;
-    }
     if (ptree->leaf) {
         //
         // we arrived at a neighbor
         //
-        //printf("leaf.\n");
         nlist->neighbors[nlist->number].patch_node = ptree;
         nlist->neighbors[nlist->number++].dist = dist;
-        return;
+        //
+        // enlarge list
+        //
+        if (nlist->number >= nlist->maxnumber) {
+            nlist->maxnumber *= 2;
+            nlist->neighbors = (neighbor_t*) realloc(nlist->neighbors,nlist->maxnumber*sizeof(neighbor_t));
+        }
     } else {
-        //printf("node.\n");
         //
         // inner node: see if we've got budget to go
         //
@@ -291,7 +277,8 @@ neighbor_list_t find_neighbors (
 
     neighbor_list_t neighbors;
     neighbors.number = 0;
-    neighbors.neighbors = (neighbor_t*) malloc(sizeof(neighbor_t)*maxn);
+    neighbors.maxnumber = 1024; // starting size
+    neighbors.neighbors = (neighbor_t*) malloc(sizeof(neighbor_t)*neighbors.maxnumber);
     const index_t ini_dist = 0;
     const index_t ini_pos  = 0;
     find_neighbors_inner (&neighbors, ini_dist, ptree,  center, ini_pos, maxd, maxn);
@@ -518,3 +505,149 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src,
     return dest;
 }
 
+/*---------------------------------------------------------------------------------------*/
+
+static int compare_nodes_occu(const void* va, const void* vb) {
+    const patch_node_t* a = *((const patch_node_t**) va);
+    const patch_node_t* b = *((const patch_node_t**) vb);
+    const long res = (b->occu - a->occu); // sort in descending order
+    return res > 0 ? 1: (res < 0 ? -1: 0);
+}
+
+
+void sort_stats(patch_node_t** node_list, index_t nnodes) {
+    qsort(node_list,nnodes,sizeof(patch_node_t*),compare_nodes_occu);
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+void flatten_stats(patch_node_t* node, patch_node_t** node_list, index_t* pos) {
+    if (node->leaf) {
+        node_list[(*pos)++] = node;
+    } else {
+        for (int i = 0; i < ALPHA; ++i)
+            flatten_stats(node->children[i],node_list,pos);
+    }
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+static void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totoccu, patch_t* aux ) {
+    index_t accu = 0;
+    for (int i = 0; i < nnodes; ++i) {
+        printf("%06d | ",i);
+        get_leaf_patch(aux,node_list[i]);
+        for (int j = 0; j < aux->k; ++j) {
+            putchar('0'+aux->values[j]);
+        }
+        const patch_node_t* p = node_list[i];
+        const double P = ((double) p->counts) / ((double) p->occu);
+        const double Q = ((double) p->occu) / ((double) totoccu);
+        accu += p->occu;
+        const double F = ((double) accu) / ((double) totoccu);
+        printf(" | %12ld | %12.10f | %12.10f | %12ld | %12.10f\n", p->occu, Q, F, p->counts, P);
+    }
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+patch_node_t * clone_stats ( patch_node_t* src ) {
+        patch_node_t* out;
+        out = alloc_node();
+        merge_stats(out,src,1);
+        return out;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
+static void find_most_popular_cand(patch_node_t * pnode, patch_node_t** currnode, index_t* currmax) {
+    //
+    // we look for leaf nodes which are not yet assigned to a cluster
+    // these are the ones that do not have a probabily vector associated to them
+    //
+    if ( pnode->leaf && (!pnode->diff) && (pnode->occu > *currmax)) {
+            *currmax = pnode->occu;
+            *currnode = pnode;
+    } else {
+        for ( int i = 0 ; i < ALPHA ; ++i ) {
+            if ( pnode->children[ i ] )  {
+                find_most_popular_cand( pnode->children[ i ], currnode, currmax );
+            }
+        }
+    }
+}
+
+patch_node_t * cluster_stats ( patch_node_t* in, const int in_place, const index_t K, const index_t maxd) {
+    patch_node_t* out;
+    if ( !in_place ) {
+        out = clone_stats(in);
+    } else {
+        out = in;
+    }
+    //
+    // clusters are made by selecting the most popular nodes as the centers
+    // and then adding those nodes which are below a given distance to them
+    //
+    // this is done for increasingly large distances, from 1 to maxd
+    //
+    patch_t* point = alloc_patch(K);
+    patch_t* center = alloc_patch(K);
+    index_t maxoccu = 0;
+    for (index_t d = 1; d <= maxd; ++d) {
+        printf("distance %ld\n",d);
+        while (1) {
+            patch_node_t* currnode = NULL;
+            index_t currmax = 0;
+            find_most_popular_cand(out,&currnode,&currmax);            
+            if (maxoccu == 0) { // first time: this is the most popular guy
+                maxoccu = currnode->occu;
+            }
+            //
+            // if the most popular is not that popular, 
+            // we finish
+            if (currnode->occu <= (maxoccu/1000)) {
+                break;
+            }
+            //
+            // add probabilities to this node (also signals that this was already visited)
+            // and initalize them to 0
+            //
+            currnode->diff = (index_t*) calloc(K,sizeof(index_t));
+            //
+            // find neighbors at distance <= d
+            //
+            get_leaf_patch(center,currnode);    
+            neighbor_list_t neighbors = find_neighbors(out,center,d,1<<20);
+            printf("found %ld neighbors\n",neighbors.number);
+            if ( neighbors.number == 0) {
+                // no neighbors
+                break;
+            }
+            //
+            // merge them with center
+            //
+            for (int j = 0; j < neighbors.number; ++j) {
+                patch_node_t* node = neighbors.neighbors[j].patch_node; 
+                get_leaf_patch(point,node);
+                //
+                // update probabilities 
+                //
+                for (int k = 0; k < K; ++k) {
+                    if (point->values[k] != center->values[k]) {
+                        currnode->diff[k] += node->occu;
+                    }
+                }
+                //
+                // merge node with center
+                // 
+                merge_nodes(currnode,neighbors.neighbors[j].patch_node);
+            }
+            free(neighbors.neighbors);
+        } // neverending while
+    } // for each distance
+    //
+    // purge all nodes that were not clustered
+    //
+
+    return out;
+}

@@ -6,5 +6,6 @@
 typedef int16_t pixel_t;
 typedef uint16_t upixel_t; // IMPORTANT: must have same width as pixel_t!!
 typedef int64_t index_t;
+typedef float prob_t; // probability
 
 #endif
