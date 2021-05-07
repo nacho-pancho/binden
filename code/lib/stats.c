@@ -22,6 +22,7 @@ static patch_node_t * create_node ( patch_node_t* parent, const pixel_t val, cha
     pnode->parent = parent;
     pnode->value = val;
     pnode->leaf = is_leaf;
+    pnode->diff = NULL;
     return pnode;
 }
 
@@ -56,7 +57,10 @@ void free_node ( patch_node_t * pnode ) {
                 //free ( pnode->children );
                 //pnode->children = NULL;
             }
-        } 
+        } else if (pnode->diff != NULL) {
+	  free( pnode->diff );
+	  pnode->diff = 0;
+	}
         free(pnode);
     }
 }
@@ -279,22 +283,24 @@ patch_node_t * gather_patch_stats ( const image_t * pnoisy,
 
 /*---------------------------------------------------------------------------------------*/
 
-void print_patch_stats ( patch_node_t * pnode, char * prefix ) {
-    if ( pnode->leaf ) {
-        printf ( "%s %10ld / %10ld\n", prefix, pnode->counts, pnode->occu );
-    } else {
-        int i;
-        const int nc = ALPHA;
-        for ( i = 0 ; i < nc ; ++i ) {
-            if ( pnode->children[ i ] )  {
-                char tmp[ 16 ];
-                snprintf ( tmp, 16, "%6d, ", i );
-                strncat ( prefix, tmp, 1023 );
-                print_patch_stats ( pnode->children[ i ], prefix );
-                prefix[ strlen ( prefix ) - strlen ( tmp ) ] = 0;
-            }
-        }
+void print_patch_stats ( patch_node_t * pnode, index_t k ) {
+  stats_iter_t* iter = stats_iter_create(k);
+  stats_iter_begin(iter,pnode);
+  int i = 0;
+  while (iter->node != NULL) {
+    printf("%5d | ",i);
+    print_binary_patch(iter->patch);
+    printf(" | %16ld | %16ld | ",iter->node->occu,iter->node->counts);
+    if (iter->node->diff) {
+      for (int r = 0; r < k; ++r) {
+	printf("%8ld ",iter->node->diff[r]);
+      }
     }
+    printf("\n");
+    stats_iter_next(iter);
+    i++;
+  }
+  printf("end of stats\n");
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -657,7 +663,7 @@ void flatten_stats(patch_node_t* node, patch_node_t** node_list, index_t* pos) {
 
 /*---------------------------------------------------------------------------------------*/
 
-static void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totoccu, patch_t* aux ) {
+void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totoccu, patch_t* aux ) {
     index_t accu = 0;
     for (int i = 0; i < nnodes; ++i) {
         printf("%06d | ",i);
@@ -685,23 +691,6 @@ patch_node_t * clone_stats ( patch_node_t* src ) {
 
 /*---------------------------------------------------------------------------------------*/
 
-static void find_most_popular_cand(patch_node_t * pnode, patch_node_t** currnode, index_t* currmax) {
-    //
-    // we look for leaf nodes which are not yet assigned to a cluster
-    // these are the ones that do not have a probabily vector associated to them
-    //
-    if ( pnode->leaf && (!pnode->diff) && (pnode->occu > *currmax)) {
-            *currmax = pnode->occu;
-            *currnode = pnode;
-    } else {
-        for ( int i = 0 ; i < ALPHA ; ++i ) {
-            if ( pnode->children[ i ] )  {
-                find_most_popular_cand( pnode->children[ i ], currnode, currmax );
-            }
-        }
-    }
-}
-
 patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t maxd) {
     // working copy; nodes get removed from it
     patch_node_t* work = clone_stats(in);
@@ -709,8 +698,6 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
     patch_node_t* clusters = create_node(NULL,0,0);
     index_t nleaves =0, noccu =0, ncounts = 0; 
     summarize_stats(work,&nleaves,&noccu,&ncounts);
-    patch_t* point = alloc_patch(K);
-    patch_t* center = alloc_patch(K);
     //
     // we identify as clusters all those patches
     // which are significantly above the expected number 
@@ -728,6 +715,10 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
             patch_node_t* leaf = update_patch_stats(iter->patch,0,clusters);
             leaf->occu = iter->node->occu;
             leaf->counts = iter->node->counts;
+	    //
+	    // add probability information to node
+	    //
+	    leaf->diff = (index_t*) calloc(K,sizeof(index_t));
             //
             // remove from candidates
             // this invalidates the iterator
@@ -746,20 +737,39 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
     //
     stats_iter_begin(iter,work);
     while (iter->node != NULL) {
-        printf("target patch ");
-        print_binary_patch(iter->patch);
         neighbor_list_t ng = find_neighbors(clusters,iter->patch,maxd); // maximum distance: may need tuning
-        sort_neighbors(ng);
-        for (int i = 0; i < ng.number; ++i) {
-            get_leaf_patch(point,ng.neighbors[i].patch_node);
-            printf("dist %02ld ",ng.neighbors[i].dist);
-            print_binary_patch(point);
-        }
+	if (ng.number > 0) {
+	  // too far away from centers; might be another interesting center
+          sort_neighbors(ng);
+	  const int min_dist = ng.neighbors[0].dist;
+	  int nmin;
+          for (nmin = 1; nmin < ng.number; ++nmin) {
+	      if (ng.neighbors[nmin].dist > min_dist) {
+	          break;
+	      }
+          }
+	  //
+	  // share stats with all the clusters at min distance
+	  //
+	  iter->node->occu /= nmin;
+	  iter->node->counts /= nmin;
+          for (int i = 0; i < nmin ; ++i) {
+	      patch_node_t* cluster_node = ng.neighbors[i].patch_node;
+              get_leaf_patch(cluster_center,cluster_node);
+	      patch_t* target_node = iter->patch;
+	      cluster_node->occu += iter->node->occu;
+	      cluster_node->counts += iter->node->counts;
+              for (int r = 0; r < K; ++r) {
+		  if (target_node->values[r] == cluster_center->values[i]) {
+		      cluster_node->diff[r] += iter->node->occu;
+		  }
+              }
+	  }
+	}
+        free(ng.neighbors);
         stats_iter_next(iter);
     }
 
-    free_patch(center);
-    free_patch(point);
     free_stats_iter(iter);
     free_node(work);
     return clusters;

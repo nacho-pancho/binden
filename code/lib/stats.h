@@ -91,7 +91,11 @@ void get_leaf_patch ( patch_t * pctx, const patch_node_t * leaf );
 /**
  * Print a patch tree with its counts
  */
-void print_patch_stats ( patch_node_t * pnode, char * prefix );
+void print_patch_stats ( patch_node_t * pnode, index_t k );
+
+/*---------------------------------------------------------------------------------------*/
+
+void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totoccu, patch_t* aux );
 
 /*---------------------------------------------------------------------------------------*/
 

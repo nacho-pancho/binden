@@ -76,9 +76,7 @@ int main(int argc, char* argv[]) {
     // merge nodes with distance <= 2
     //
     printf("before merge\n");
-    char line[1024];
-    line[0] = 0;
-    print_patch_stats(stats_tree,line);
+    print_patch_stats(stats_tree,center->k);
     for (int i = 0; i < center->k; ++i)
         center->values[i] = 0;
     patch_node_t* dest = get_patch_node(stats_tree, center);
@@ -92,8 +90,7 @@ int main(int argc, char* argv[]) {
     // merge nodes
     //
     printf("after merge\n");
-    line[0] = 0;
-    print_patch_stats(stats_tree,line);
+    print_patch_stats(stats_tree,center->k);
 
     free(neighbors.neighbors);
     free_node(merged_tree);

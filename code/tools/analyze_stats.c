@@ -36,22 +36,6 @@ static int compare_nodes_occu(const void* va, const void* vb) {
     return res > 0 ? 1: (res < 0 ? -1: 0);
 }
 
-static void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totoccu, patch_t* aux ) {
-    index_t accu = 0;
-    for (int i = 0; i < nnodes; ++i) {
-        printf("%06d | ",i);
-        get_leaf_patch(aux,node_list[i]);
-        for (int j = 0; j < aux->k; ++j) {
-            putchar('0'+aux->values[j]);
-        }
-        const patch_node_t* p = node_list[i];
-        const double P = ((double) p->counts) / ((double) p->occu);
-        const double Q = ((double) p->occu) / ((double) totoccu);
-        accu += p->occu;
-        const double F = ((double) accu) / ((double) totoccu);
-        printf(" | %12ld | %12.10f | %12.10f | %12ld | %12.10f\n", p->occu, Q, F, p->counts, P);
-    }
-}
 /**
  * These are the options that we can handle through the command line
  */
@@ -159,21 +143,14 @@ int main(int argc, char **argv) {
     printf("clusters\n");
     patch_node_t * clustered = cluster_stats ( stats_tree, template->k, 4);    
 
-    char line[1024];
-    line[0] = 0;
     totoccu = 0;
     totcount = 0;
     nleaves = 0;
     printf("summary\n");
     summarize_stats(clustered,&nleaves,&totoccu,&totcount);
     printf("nleaves %ld totoccu %ld totcount %ld\n",nleaves,totoccu,totcount);
-    node_list = (patch_node_t**) calloc(nleaves,sizeof(patch_node_t*));
     printf("scan\n");
-    pos = 0;
-    scan_tree(clustered,node_list,&pos);
-    print_node_list(node_list,nleaves,totoccu,aux);
-
-    test_stats_iter(template->k,clustered);
+    print_patch_stats(clustered,template->k);
     //
     // cleanup and go
     //

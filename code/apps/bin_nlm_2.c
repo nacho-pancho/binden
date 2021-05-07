@@ -55,7 +55,6 @@ int main ( int argc, char* argv[] ) {
     const int norm = 2;
     const int exclude_center = 1;
     const index_t maxd = 4;
-    const index_t maxn = 1<<20; // 1M
     index_t w[maxd];
     for (index_t d = 0; d < maxd; ++d) {
         w[d] = 1024/(d+1);
@@ -100,7 +99,7 @@ int main ( int argc, char* argv[] ) {
             }
         }
         if ((i > 0) &&!(i % 100)) {
-            printf("row %d changed %d\n",i,changed);
+            printf("row %d changed %ld\n",i,changed);
         }
     }
 

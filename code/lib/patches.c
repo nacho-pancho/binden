@@ -84,11 +84,9 @@ void print_patch ( const patch_t * pctx ) {
 
 void print_binary_patch ( const patch_t * pctx ) {
     int j;
-    printf ( "[ " );
     for ( j = 0 ; j < pctx->k ; j++ ) {
         fputc( pctx->values[ j ] ?'1':'.', stdout);
     }
-    printf ( " ]\n" );
 }
 
 
