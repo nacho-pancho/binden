@@ -1,10 +1,11 @@
 set(TARGETS 
-	classic_nlm
-	bin_nlm_1
-	bin_nlm_2
-	bin_nlm_3
-	bin_nlm_4
 	quorum_den
+	nlm_original
+	nlm_semibin
+	nlm_fullbin_windowed_avg
+	nlm_fullbin_windowed_bayes
+	nlm_fullbin_tree_bayes
+	bin_epll
 )
 foreach (aux ${TARGETS})
  add_executable (${aux} ${aux}.c nlm_options.c)

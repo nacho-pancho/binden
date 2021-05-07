@@ -42,6 +42,7 @@ static int compare_nodes_occu(const void* va, const void* vb) {
 static struct argp_option options[] = {
     {"verbose",        'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output",0 },
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output",0 },
+    {"cluster",        'c', "filename", 0, "Save clusters to specified file.",0 },
     { 0 } // terminator
 };
 
@@ -50,7 +51,8 @@ static struct argp_option options[] = {
  */
 typedef struct  {
     char *stats_file;   
-    char *template_file; 
+    char *template_file;
+  char *clusters_file;
 } config_st; 
 
 /**
@@ -90,7 +92,8 @@ int main(int argc, char **argv) {
     set_log_level(LOG_INFO);
     set_log_stream(stdout);
     cfg.stats_file = NULL;
-    cfg.template_file = NULL; 
+    cfg.template_file = NULL;
+    cfg.clusters_file = "clusters.stat";
     info("Parsing arguments...\n");
     /*
      * call parser
@@ -149,6 +152,8 @@ int main(int argc, char **argv) {
     printf("summary\n");
     summarize_stats(clustered,&nleaves,&totoccu,&totcount);
     printf("nleaves %ld totoccu %ld totcount %ld\n",nleaves,totoccu,totcount);
+    save_stats(cfg.clusters_file,clustered);
+
     printf("scan\n");
     print_patch_stats(clustered,template->k);
     //
@@ -179,6 +184,9 @@ static error_t parse_opt (int key, char *arg, struct argp_state *state) {
         break;
     case 'v':
         set_log_level(LOG_DEBUG);
+        break;
+    case 'c':
+      cfg->clusters_file = arg;
         break;
 
     case ARGP_KEY_ARG:

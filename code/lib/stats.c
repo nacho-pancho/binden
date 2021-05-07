@@ -699,10 +699,11 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
     index_t nleaves =0, noccu =0, ncounts = 0; 
     summarize_stats(work,&nleaves,&noccu,&ncounts);
     //
-    // we identify as clusters all those patches
-    // which are significantly above the expected number 
-    // of them arising purely by chance
-    // for uniform noise this is simply total_counts/2^{patch size}
+    // the initial clusters are selected among the patches 
+    // that have occurred significantly more times than
+    // the expected value under a uniform distribution
+    //  this is simply total_counts/2^{patch size}
+    //
     const index_t thres = noccu >> K;
     printf("threshold %ld\n",thres);
     stats_iter_t* iter = stats_iter_create(K);
@@ -737,11 +738,13 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
     //
     // now we assign the rest of the patches to the closest one in the cluster centers
     //
+    index_t npoints = 0, nassigned = 0, ndiscarded = 0;
     stats_iter_begin(iter,work);
     while (iter->node != NULL) {
-        neighbor_list_t ng = find_neighbors(clusters,iter->patch,maxd); // maximum distance: may need tuning
+        npoints++;
+        neighbor_list_t ng = find_neighbors(clusters,iter->patch,maxd); // maximum distance: may need tuning	
 	if (ng.number > 0) {
-	  // too far away from centers; might be another interesting center
+	  nassigned ++;
           sort_neighbors(ng);
 	  const int min_dist = ng.neighbors[0].dist;
 	  int nmin;
@@ -767,10 +770,13 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
 		  }
               }
 	  }
+	} else {
+	  ndiscarded++;
 	}
         free(ng.neighbors);
         stats_iter_next(iter);
     }
+    printf("points %12ld assigned %12ld discarded %12ld\n",npoints,nassigned,ndiscarded);
     free_patch(cluster_center);
     free_stats_iter(iter);
     free_node(work);

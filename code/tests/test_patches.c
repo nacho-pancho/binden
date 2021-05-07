@@ -75,6 +75,9 @@ int main(int argc, char* argv[]) {
     if (res != RESULT_OK) {
         fprintf(stderr,"error writing image %s.\n",ofname);
     }
+    print_patch(pat);
+    print_patch_fancy(pat,tpl);
+    print_binary_patch_fancy(pat,tpl);
     free_patch(pat);
     free_linear_template(ltpl);
     free_patch_template(tpl);

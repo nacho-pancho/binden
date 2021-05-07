@@ -1,8 +1,10 @@
 /**
  * binarized non-local means
  * the patches are binarized and compared as bit fields
- * the weights are still Gaussian
- * the center values, however, are treated as signed integers
+ * the weights are of the form 1/d, with d = hamming distance
+ * between the target and the src patch 
+ * the center values are as in NLM, a simple average of the 
+ * weighted samples.
  */
 #include <stdio.h>
 #include <stdlib.h>

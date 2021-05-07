@@ -42,4 +42,6 @@ void print_binary_patch ( const patch_t * ppatch );
 
 void print_patch_fancy ( const patch_t* patch, const patch_template_t * ptpl );
 
+void print_binary_patch_fancy ( const patch_t* patch, const patch_template_t * ptpl );
+
 #endif

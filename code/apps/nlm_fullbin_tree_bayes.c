@@ -1,5 +1,8 @@
 /**
- * binarized non-local means
+ * full binary version of non-local means
+ * input and output images are binary
+ * patches are binary
+ * distances are binary, with some weights
  * the patches are stored in a tree structure
  */
 #include <stdio.h>
@@ -55,6 +58,7 @@ int main ( int argc, char* argv[] ) {
     const int norm = 2;
     const int exclude_center = 1;
     const index_t maxd = 4;
+    const double perr = 0.05;
     index_t w[maxd];
     for (index_t d = 0; d < maxd; ++d) {
         w[d] = 1024/(d+1);
@@ -84,17 +88,18 @@ int main ( int argc, char* argv[] ) {
                 const index_t d = neighbors.neighbors[i].dist;
                 if (d == 0) continue;
                 const patch_node_t* node = neighbors.neighbors[i].patch_node;
-                const double avg_val = (0.5 + (double) node->counts) / ((double) node->occu + 1.0);
-                //const double w = 1.0/d; // exp ( C * d );
-                y += w[d-1]*avg_val;
-                norm += w[d-1];
+                y += w[d-1]*node->counts;
+                norm += w[d-1]*node->occu;
             }
-            //printf("%f %f %f\n",y, norm, y/norm);
             free(neighbors.neighbors);
+	    // minimum Bayes risk rule
+	    const double q = (0.5 + y) / (1.0 + norm);
             const pixel_t z = get_linear_pixel(img, li);
-            const pixel_t x = 2*y > norm ? 1: 0;
-            if (x != z) {
-                set_linear_pixel ( &out, li,  x);
+            if (z && (q < perr)) {
+                set_linear_pixel ( &out, li, 0);
+                changed++;
+            } else if ((!z) && (q > (1.0-perr))) {
+                set_linear_pixel ( &out, li, 1);
                 changed++;
             }
         }

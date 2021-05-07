@@ -8,7 +8,9 @@
 static struct argp_option options[] = {
     {"verbose",        'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output",0 },
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output",0 },
+    {"input",          'i', "file",    0    , "input file",0 },
     {"output",         'o', "file",    0    , "output file",0 },
+    {"template",       'T', "file",    0    , "template file.",0 },
     {"tradius",        'r', "radius",  0    , "radius of the template ball",0 },
     {"tnorm",          'n', "norm",    0    , "norm of the template ball.",0 },
     {"tscale",         's', "integer", 0    , "scale of the template ball.",0 },
@@ -16,7 +18,8 @@ static struct argp_option options[] = {
     {"maxdist",        'd', "integer", 0    , "output file",0 },
     {"perr",           'p', "probability", 0, "output file",0 },
     {"search",         'R', "radius",  0    , "output file",0 },
-    {"decay",         'w', "rate",  0    , "weight decay as function of distance",0 },
+    {"decay",          'w', "rate",  0    , "weight decay as function of distance",0 },
+    {"stats",          'S', "stats",    0    , "stats filename.",0 },
     { 0 } // terminator
 };
 
@@ -34,7 +37,7 @@ static char program_doc[] =
 /**
  * A general description of the input arguments we accept; appears when calling with --help
  */
-static char args_doc[] = "<STATS_FILE> <TEMPLATE_FILE>";
+static char args_doc[] = "<INPUT_FILE>";
 
 /**
  * argp configuration structure
@@ -44,8 +47,10 @@ static struct argp argp = { options, _parse_opt, args_doc, program_doc, 0, 0, 0 
 nlm_config_t parse_opt(int argc, char** argv ) {
 
     nlm_config_t cfg;
-    cfg.input_file  = "";
-    cfg.output_file = "nlm_out.pnm";
+    cfg.input_file  = NULL;
+    cfg.output_file = "denoised.pnm";
+    cfg.stats_file = NULL;
+    cfg.template_file = NULL;
     cfg.template_radius = 4;
     cfg.template_norm = 2;
     cfg.template_center = 0 ; // exclude center
@@ -77,6 +82,9 @@ static error_t _parse_opt (int key, char *arg, struct argp_state *state) {
     case 'o':
         cfg->output_file = arg;
         break;
+    case 'S':
+        cfg->stats_file = arg;
+        break;
     case 'r':
         cfg->template_radius = atoi(arg);
         break;
@@ -100,6 +108,9 @@ static error_t _parse_opt (int key, char *arg, struct argp_state *state) {
         break;
     case 'R':
         cfg->search_radius= atoi(arg);
+        break;
+    case 'T':
+        cfg->template_file = arg;
         break;
 
     case ARGP_KEY_ARG:

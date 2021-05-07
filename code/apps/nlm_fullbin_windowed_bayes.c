@@ -1,8 +1,10 @@
 /**
- * binarized non-local means
+ * full binary non-local means
  * the patches are binarized and compared as bit fields
- * the weights are still Gaussian
- * the center values, however, are treated as signed integers
+ * the weights are of the form 1/d, where d is the happing distanece
+ * between two patches.
+ * the center values are binary and computed following a Bayesian
+ * risk minimization rule.
  */
 #include <stdio.h>
 #include <stdlib.h>
