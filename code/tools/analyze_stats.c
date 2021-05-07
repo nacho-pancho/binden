@@ -157,7 +157,6 @@ int main(int argc, char **argv) {
     printf("cleanup\n");
     free_node(clustered);
     free_patch(aux);
-    free(node_list);
     free_patch_template(template);
     free_stats(stats_tree);
     t1 = clock();

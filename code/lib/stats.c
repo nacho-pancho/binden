@@ -707,6 +707,7 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
     printf("threshold %ld\n",thres);
     stats_iter_t* iter = stats_iter_create(K);
     stats_iter_begin(iter,work);
+    
     while (iter->node != NULL) {
         if (iter->node->occu >= thres) {
             //
@@ -732,6 +733,7 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
             stats_iter_next(iter);
         }
     }
+    patch_t* cluster_center = alloc_patch(K);
     //
     // now we assign the rest of the patches to the closest one in the cluster centers
     //
@@ -760,7 +762,7 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
 	      cluster_node->occu += iter->node->occu;
 	      cluster_node->counts += iter->node->counts;
               for (int r = 0; r < K; ++r) {
-		  if (target_node->values[r] == cluster_center->values[i]) {
+		  if (target_node->values[r] == cluster_center->values[r]) {
 		      cluster_node->diff[r] += iter->node->occu;
 		  }
               }
@@ -769,7 +771,7 @@ patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t 
         free(ng.neighbors);
         stats_iter_next(iter);
     }
-
+    free_patch(cluster_center);
     free_stats_iter(iter);
     free_node(work);
     return clusters;
