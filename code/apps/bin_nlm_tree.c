@@ -113,14 +113,16 @@ int main ( int argc, char* argv[] ) {
         tpl = generate_ball_template ( cfg.template_radius, cfg.template_norm, cfg.template_center ? 0 : 1 );
         sort_template ( tpl, 1 );
     } else {
-        patch_template_t* template = read_template ( cfg.template_file );
-        if ( !template->k ) {
+        tpl = read_template ( cfg.template_file );
+        if ( !tpl->k ) {
             fprintf ( stderr, "could not load template from %s.\n", cfg.template_file );
             pixels_free ( img->pixels );
             free ( img );
             exit ( RESULT_ERROR );
         }
     }
+    printf("Using the following template:\n");
+    print_template(tpl);
     //
     // gather patch stats
     //
@@ -147,7 +149,7 @@ int main ( int argc, char* argv[] ) {
     const index_t minoccu = 100;
     const index_t maxclusters = 1000;
     patch_node_t * clustered = cluster_stats ( stats, tpl->k, cfg.max_dist, minoccu, maxclusters );
-    print_patch_stats ( clustered, tpl->k );
+    //print_patch_stats ( clustered, tpl->k );
 
     printf ( "denoising....\n" );
     apply_denoiser ( &out, img, tpl, clustered, &cfg );
