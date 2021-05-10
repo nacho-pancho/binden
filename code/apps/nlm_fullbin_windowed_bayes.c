@@ -174,16 +174,12 @@ int main ( int argc, char* argv[] ) {
     //
     //
     //
-    // algorithm parameters
-    //
-
-    patch_template_t* tpl;
-    //
     // create template
     //
+    patch_template_t* tpl;
     tpl = generate_ball_template ( cfg.template_radius, cfg.template_norm, cfg.template_center ? 0 : 1 );
     sort_template(tpl,1);
-    dilate_template(tpl,2,1);
+    dilate_template(tpl,cfg.template_scale,1);
     //
     // non-local means
     // search a window of size R
@@ -203,7 +199,6 @@ int main ( int argc, char* argv[] ) {
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
-
 
     printf ( "finishing...\n" );
     free ( all_patches );

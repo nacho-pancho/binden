@@ -88,6 +88,62 @@ int patch_dist (const index_t i, const index_t j, const patch_template_t* tpl ) 
     return d;
 }
 
+index_t apply_denoiser(image_t* out, const image_t* img, 
+    const patch_template_t* tpl, nlm_config_t* cfg) {
+
+    const index_t R = cfg->search_radius;
+    const index_t maxd = cfg->max_dist;
+    const double perr = cfg->perr;
+
+    index_t w[maxd];
+    for (index_t d = 0; d < maxd; ++d) {
+        w[d] = 1024/((d>>cfg->decay)+1);
+	printf("dist %ld weight %ld\n",d,w[d]);
+    }
+    
+    const int m = img->info.height;
+    const int n = img->info.width;
+    index_t oned = 0;
+    index_t zeroed = 0;
+    for ( int i = 0, li = 0 ; i < m ; ++i ) {
+        for ( int j = 0 ; j < n ; ++j, ++li ) {
+            index_t y = 0;
+            index_t norm = 0;
+            int di0 = i > R     ? i - R : 0;
+            int di1 = i < ( m - R ) ? i + R : m;
+            int dj0 = j > R     ? j - R : 0;
+            int dj1 = j < ( n - R ) ? j + R : n;
+            for ( int di = di0 ; di < di1 ; ++di ) {
+                for ( int dj = dj0 ; dj < dj1 ; ++dj ) {
+                    const index_t lj = di*n + dj;
+                    const int d = patch_dist (li, lj, tpl );
+                    if (d > maxd) {
+                        continue;
+                    }
+                    if (get_pixel ( img, di, dj )) {
+                        y += w[d-1];                    
+                    }
+                    norm += w[d-1];
+                }
+            }
+            const pixel_t z = get_linear_pixel(img, li);
+            const pixel_t x = cfg->denoiser(z,y,norm,perr);
+            if (z != x) {
+                set_linear_pixel ( out, li, x);
+                if (x) 
+                    oned++;
+                else
+                    zeroed++;
+            }
+        }
+        if (!(i % 50)) {
+            printf("| %6d | 1->0 %8ld | 0->1 %8ld |\n",i,zeroed,oned);
+        }
+    }
+    return zeroed+oned;
+}
+
+
 int main ( int argc, char* argv[] ) {
 
     nlm_config_t cfg = parse_opt(argc,argv);
@@ -116,22 +172,14 @@ int main ( int argc, char* argv[] ) {
     //
     //
     //
-    const int m = img->info.height;
-    const int n = img->info.width;
     //
     // create template
     //
-    const int radius = 3;
-    const int norm = 2;
-    const int exclude_center = 1;
     patch_template_t* tpl;
-    const double perr = cfg.perr;
-    tpl = generate_ball_template ( radius, norm, exclude_center );
-    const index_t maxd = 5;
-    index_t w[maxd];
-    for (index_t d = 0; d < maxd; ++d) {
-        w[d] = 1024/(d+1);
-    }
+    tpl = generate_ball_template ( cfg.template_radius, cfg.template_norm, cfg.template_center ? 0 : 1 );
+    sort_template(tpl,1);
+    dilate_template(tpl,cfg.template_scale,1);
+
     //
     // non-local means
     // search a window of size R
@@ -139,40 +187,12 @@ int main ( int argc, char* argv[] ) {
     printf ( "extracting patches....\n" );
     extract_patches ( img, tpl );
 
-    printf ( "denoising....\n" );
-    index_t changed = 0;
-    const int R = 20;
-    for ( int i = 0, li = 0 ; i < m ; ++i ) {
-        for ( int j = 0 ; j < n ; ++j, ++li ) {
-            //const pixel_t z = get_linear_pixel ( img, li );
-            double y = 0.0;
-            double norm = 0;
-            int di0 = i > R     ? i - R : 0;
-            int di1 = i < ( m - R ) ? i + R : m;
-            int dj0 = j > R     ? j - R : 0;
-            int dj1 = j < ( n - R ) ? j + R : n;
-            for ( int di = di0 ; di < di1 ; ++di ) {
-                for ( int dj = dj0 ; dj < dj1 ; ++dj ) {
-                    const index_t lj = di*n + dj;
-                    const int d = patch_dist (li, lj, tpl );
-                    if (d > maxd) {
-                        continue;
-                    }
-                    y += w[d-1] * (get_pixel ( img, di, dj ));                    
-                    norm += w[d-1];
-                }
-            }
-            const pixel_t z = get_linear_pixel(img, li);
-            const pixel_t x = cfg.denoiser(z,y,norm,perr);
-            if (z != x) {
-                set_linear_pixel ( &out, li, x);
-                changed++;
-            }
-        }
-	if (!(i % 100)) {
-	    printf("row %d\n",i);
-	}
-    }
+    printf ( "denoising / first pass....\n" );
+    apply_denoiser(&out, img, tpl, &cfg);
+
+    printf ( "denoising / second pass....\n" );
+    extract_patches ( &out, tpl );
+    apply_denoiser(&out, img, tpl, &cfg);
 
     printf ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );

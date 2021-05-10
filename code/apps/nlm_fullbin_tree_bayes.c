@@ -63,11 +63,28 @@ int main ( int argc, char* argv[] ) {
     sort_template(tpl,1);
     const double perr = cfg.perr;
     //
-    // non-local means
-    // search a window of size R
+    // gather patch stats
     //
+    patch_node_t* stats;
     printf ( "extracting patches....\n" );
-    patch_node_t* stats = gather_patch_stats(img,img,tpl,NULL,NULL);
+    if (cfg.stats_file) {
+        //
+        // load patches from a file
+        // the patches from this file need not have been
+        // generated from this image, but the template
+        // must have been the same
+        //
+        stats = load_stats(cfg.stats_file);
+        if (!stats) {
+        fprintf ( stderr, "could not load stats from %s.\n",cfg.stats_file );
+        free_patch_template(tpl);
+            pixels_free ( img->pixels );
+            free ( img );
+            return RESULT_ERROR;     
+        } 
+    } else {
+        stats = gather_patch_stats(img,img,tpl,NULL,NULL);
+    }     
 
     printf ( "denoising....\n" );
 
