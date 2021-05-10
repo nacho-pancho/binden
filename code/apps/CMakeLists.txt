@@ -5,7 +5,7 @@ set(TARGETS
 	nlm_fullbin_windowed_avg
 	nlm_fullbin_windowed_bayes
 	nlm_fullbin_tree_bayes
-	#bin_epll
+	bin_epll
 )
 foreach (aux ${TARGETS})
  add_executable (${aux} ${aux}.c nlm_options.c)

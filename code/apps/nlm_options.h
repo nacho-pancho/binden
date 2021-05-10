@@ -2,6 +2,7 @@
 #define NL_OPTIONS_H
 
 #include <argp.h>
+#include "denoiser.h"
 
 /**
  * Program options. These are filled in by the argument parser
@@ -19,6 +20,7 @@ typedef struct nlm_config {
     int max_dist;
     double perr;
     int decay;
+    denoiser_f denoiser;
 } nlm_config_t; 
 
 nlm_config_t parse_opt(int argc, char** argv );

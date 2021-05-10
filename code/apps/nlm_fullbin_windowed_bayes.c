@@ -127,16 +127,14 @@ index_t apply_denoiser(image_t* out, const image_t* img,
                     norm += w[d-1];
                 }
             }
-            // minimum risk Bayesian rule
-            const double p1 = ((double)y + 0.5) / ((double)norm + 1.0);
-            //printf("%f\n",p1);
-            const pixel_t z = get_linear_pixel ( img, li );
-            if (z && (p1 < perr)) {
-                set_linear_pixel ( out, li, 0);
-                zeroed++;
-            } else if ((!z) && (p1 > (1.0-perr))) {
-                set_linear_pixel ( out, li, 1);
-                oned++;
+            const pixel_t z = get_linear_pixel(img, li);
+            const pixel_t x = cfg->denoiser(z,y,norm,perr);
+            if (z != x) {
+                set_linear_pixel ( out, li, x);
+                if (x) 
+                    oned++;
+                else
+                    zeroed++;
             }
         }
         if (!(i % 50)) {

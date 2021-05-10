@@ -1,5 +1,5 @@
 #include <stdlib.h>
-
+#include <string.h>
 #include "nlm_options.h"
 #include "logging.h"
 /**
@@ -20,6 +20,7 @@ static struct argp_option options[] = {
     {"search",         'R', "radius",  0    , "output file",0 },
     {"decay",          'w', "rate",  0    , "weight decay as function of distance",0 },
     {"stats",          'S', "stats",    0    , "stats filename.",0 },
+    {"denoiser",       'D', "rule",    0    , "denoising rule.",0 },
     { 0 } // terminator
 };
 
@@ -59,6 +60,7 @@ nlm_config_t parse_opt(int argc, char** argv ) {
     cfg.max_dist = 10;
     cfg.perr = 0.1;
     cfg.decay = 1;
+    cfg.denoiser = majority;
     argp_parse (&argp, argc, argv, 0, 0, &cfg);
     
     return cfg;
@@ -111,6 +113,21 @@ static error_t _parse_opt (int key, char *arg, struct argp_state *state) {
         break;
     case 'T':
         cfg->template_file = arg;
+        break;
+    case 'D':
+        if (!strcasecmp(arg,"majority") || 
+            !strcasecmp(arg,"mean") ||
+            !strcasecmp(arg,"average")) {
+            cfg->denoiser = majority;
+        } else if (!strcasecmp(arg,"bayes")) {
+            cfg->denoiser = bayes;
+        } else if (!strcasecmp(arg,"dude")) {
+            cfg->denoiser = dude;
+        } else {
+            cfg->denoiser = NULL;
+            fprintf(stderr,"Unknown denoising rule %s\n",arg);
+            return ARGP_ERR_UNKNOWN;
+        }
         break;
 
     case ARGP_KEY_ARG:

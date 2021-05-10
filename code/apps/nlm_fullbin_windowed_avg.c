@@ -125,7 +125,7 @@ int main ( int argc, char* argv[] ) {
     const int norm = 2;
     const int exclude_center = 1;
     patch_template_t* tpl;
-
+    const double perr = cfg.perr;
     tpl = generate_ball_template ( radius, norm, exclude_center );
     const index_t maxd = 5;
     index_t w[maxd];
@@ -140,6 +140,7 @@ int main ( int argc, char* argv[] ) {
     extract_patches ( img, tpl );
 
     printf ( "denoising....\n" );
+    index_t changed = 0;
     const int R = 20;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
@@ -161,7 +162,12 @@ int main ( int argc, char* argv[] ) {
                     norm += w[d-1];
                 }
             }
-            set_linear_pixel ( &out, li, y/norm < 0.5 ? 0: 1);
+            const pixel_t z = get_linear_pixel(img, li);
+            const pixel_t x = cfg.denoiser(z,y,norm,perr);
+            if (z != x) {
+                set_linear_pixel ( &out, li, x);
+                changed++;
+            }
         }
 	if (!(i % 100)) {
 	    printf("row %d\n",i);
