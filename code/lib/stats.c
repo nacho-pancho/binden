@@ -691,32 +691,40 @@ patch_node_t * clone_stats ( patch_node_t* src ) {
 
 /*---------------------------------------------------------------------------------------*/
 
-patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t maxd) {
+patch_node_t * cluster_stats ( 
+    patch_node_t* in, 
+    const index_t K, 
+    const index_t maxd, 
+    const index_t minoccu,
+    const index_t maxclusters) {
     // working copy; nodes get removed from it
     patch_node_t* work = clone_stats(in);
     // clusters are saved here
     patch_node_t* clusters = create_node(NULL,0,0);
-    index_t nleaves =0, noccu =0, ncounts = 0; 
-    summarize_stats(work,&nleaves,&noccu,&ncounts);
     //
     // the initial clusters are selected among the patches 
     // that have occurred significantly more times than
     // the expected value under a uniform distribution
     //  this is simply total_counts/2^{patch size}
     //
-    const index_t thres = noccu >> K;
-    printf("threshold %ld\n",thres);
+    //const index_t thres = noccu >> K;
+    const index_t thres = minoccu;
+    index_t nclusters = 0;
     stats_iter_t* iter = stats_iter_create(K);
     stats_iter_begin(iter,work);
     
     while (iter->node != NULL) {
-        if (iter->node->occu >= thres) {
+        if (nclusters > maxclusters) {
+            break;
+        }
+        if (iter->node->occu > thres) {
             //
             // add to clusters
             //
             patch_node_t* leaf = update_patch_stats(iter->patch,0,clusters);
             leaf->occu = iter->node->occu;
             leaf->counts = iter->node->counts;
+            nclusters ++;
 	    //
 	    // add probability information to node
 	    //

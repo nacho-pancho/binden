@@ -19,11 +19,60 @@
 #include "stats.h"
 #include "nlm_options.h"
 
+/*---------------------------------------------------------------------------------------*/
+
+index_t apply_denoiser(image_t* out, const image_t* img, 
+    const patch_template_t* tpl, patch_node_t* stats, nlm_config_t* cfg) {
+
+    const index_t maxd = cfg->max_dist;
+    const double perr = cfg->perr;
+
+    index_t w[maxd];
+    for (index_t d = 0; d < maxd; ++d) {
+        w[d] = 1024/(d+1);
+    }
+    patch_t* Pij = alloc_patch(tpl->k);
+    index_t changed = 0;
+    const int m = img->info.height;
+    const int n = img->info.width;
+
+    for ( int i = 0, li = 0 ; i < m ; ++i ) {
+        for ( int j = 0 ; j < n ; ++j, ++li ) {
+            get_patch(img,tpl,i,j,Pij);
+            index_t y = 0;
+            index_t norm = 0;
+            neighbor_list_t neighbors = find_neighbors ( stats, Pij, maxd);
+            for (int i = 0; i < neighbors.number; ++i) {
+                const index_t d = neighbors.neighbors[i].dist;
+                if (d == 0) continue;
+                const patch_node_t* node = neighbors.neighbors[i].patch_node;
+                y += w[d-1]*node->counts;
+                norm += w[d-1]*node->occu;
+            }
+            free(neighbors.neighbors);
+            const pixel_t z = get_linear_pixel(img, li);
+            const pixel_t x = cfg->denoiser(z,y,norm,perr);
+            if (z != x) {
+                set_linear_pixel ( out, li, x);
+                changed++;
+            }
+        }
+        if ((i > 0) &&!(i % 100)) {
+            printf("row %d changed %ld ( %7.4f%% )\n",i,changed, (double)changed * 100.0 / (double)li);
+        }
+    }
+    free_patch(Pij);
+    return changed;
+}
+
+/*---------------------------------------------------------------------------------------*/
+
 int main ( int argc, char* argv[] ) {
 
     nlm_config_t cfg = parse_opt(argc,argv);
     
     image_t* img = read_pnm ( cfg.input_file );
+    
     if ( img == NULL ) {
         fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
         return RESULT_ERROR;
@@ -41,27 +90,26 @@ int main ( int argc, char* argv[] ) {
         return RESULT_ERROR;
     }
 
+    image_t* pre = img;
+    if ( cfg.prefiltered_file != NULL ) {
+        pre = read_pnm ( cfg.prefiltered_file );
+        if ( pre->info.result != RESULT_OK ) {
+            fprintf ( stderr, "error reading prefiltered image %s.\n", cfg.prefiltered_file );
+            pixels_free ( pre->pixels );
+            pixels_free ( img->pixels );
+            free ( img );
+            free ( pre );
+            return RESULT_ERROR;
+        }
+    }
+
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
-    //
-    //
-    //
-    const int m = img->info.height;
-    const int n = img->info.width;
-    //
-    // create template
-    //
-    const index_t maxd = cfg.max_dist;
-    index_t w[maxd];
-    for (index_t d = 0; d < maxd; ++d) {
-        w[d] = 1024/(d+1);
-    }
 
     patch_template_t* tpl;
     tpl = generate_ball_template ( cfg.template_radius, cfg.template_norm, cfg.template_center ? 0 : 1 );
     sort_template(tpl,1);
-    const double perr = cfg.perr;
     //
     // gather patch stats
     //
@@ -83,38 +131,15 @@ int main ( int argc, char* argv[] ) {
             return RESULT_ERROR;     
         } 
     } else {
-        stats = gather_patch_stats(img,img,tpl,NULL,NULL);
+        stats = gather_patch_stats(img,pre,tpl,NULL,NULL);
     }     
+    const index_t minoccu = 100;
+    const index_t maxclusters = 1000;
+    patch_node_t *clustered = cluster_stats ( stats, tpl->k, cfg.max_dist, minoccu, maxclusters);
+    print_patch_stats(clustered,tpl->k);
 
     printf ( "denoising....\n" );
-
-    patch_t* Pij = alloc_patch(tpl->k);
-    index_t changed = 0;
-    for ( int i = 0, li = 0 ; i < m ; ++i ) {
-        for ( int j = 0 ; j < n ; ++j, ++li ) {
-            get_patch(img,tpl,i,j,Pij);
-            index_t y = 0;
-            index_t norm = 0;
-            neighbor_list_t neighbors = find_neighbors ( stats, Pij, maxd);
-            for (int i = 0; i < neighbors.number; ++i) {
-                const index_t d = neighbors.neighbors[i].dist;
-                if (d == 0) continue;
-                const patch_node_t* node = neighbors.neighbors[i].patch_node;
-                y += w[d-1]*node->counts;
-                norm += w[d-1]*node->occu;
-            }
-            free(neighbors.neighbors);
-            const pixel_t z = get_linear_pixel(img, li);
-            const pixel_t x = cfg.denoiser(z,y,norm,perr);
-            if (z != x) {
-                set_linear_pixel ( &out, li, x);
-                changed++;
-            }
-        }
-        if ((i > 0) &&!(i % 100)) {
-            printf("row %d changed %ld\n",i,changed);
-        }
-    }
+    apply_denoiser(&out,img,tpl,clustered,&cfg);
 
     printf ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );
@@ -123,10 +148,17 @@ int main ( int argc, char* argv[] ) {
     }
 
     printf ( "finishing...\n" );
+    free_node(clustered);
     free_node(stats);
     free_patch_template ( tpl );
     pixels_free ( img->pixels );
     pixels_free ( out.pixels );
+    if (pre != img) {
+        pixels_free ( pre->pixels );
+        free ( pre );
+    }
     free ( img );
     return res;
 }
+
+/*---------------------------------------------------------------------------------------*/

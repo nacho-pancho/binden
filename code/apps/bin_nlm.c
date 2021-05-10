@@ -19,6 +19,8 @@
 #include "bitfun.h"
 #include "nlm_options.h"
 
+/*---------------------------------------------------------------------------------------*/
+
 upixel_t* all_patches;
 
 upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
@@ -59,6 +61,8 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
     return all_patches;
 }
 
+/*---------------------------------------------------------------------------------------*/
+
 /**
  * the distance between two patches is computed as the number of different
  * bits between their binary representations.
@@ -87,6 +91,8 @@ int patch_dist (const index_t i, const index_t j, const patch_template_t* tpl ) 
     }
     return d;
 }
+
+/*---------------------------------------------------------------------------------------*/
 
 index_t apply_denoiser(image_t* out, const image_t* img, 
     const patch_template_t* tpl, nlm_config_t* cfg) {
@@ -143,6 +149,7 @@ index_t apply_denoiser(image_t* out, const image_t* img,
     return zeroed+oned;
 }
 
+/*---------------------------------------------------------------------------------------*/
 
 int main ( int argc, char* argv[] ) {
 
@@ -208,3 +215,5 @@ int main ( int argc, char* argv[] ) {
     free ( img );
     return res;
 }
+
+/*---------------------------------------------------------------------------------------*/

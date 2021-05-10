@@ -144,7 +144,10 @@ int main(int argc, char **argv) {
     free(node_list);
     
     printf("clusters\n");
-    patch_node_t * clustered = cluster_stats ( stats_tree, template->k, 4);    
+    const index_t maxdist = 4;
+    const index_t maxclusters = 1000;
+    const index_t minoccu = 100;
+    patch_node_t * clustered = cluster_stats ( stats_tree, template->k, maxdist, minoccu, maxclusters);    
 
     totoccu = 0;
     totcount = 0;

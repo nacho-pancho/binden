@@ -12,6 +12,7 @@ typedef struct nlm_config {
     const char *output_file;
     const char *stats_file;
     const char *template_file;
+    const char *prefiltered_file;
     int template_radius;
     int template_norm;
     int template_center;

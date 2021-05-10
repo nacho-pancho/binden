@@ -9,14 +9,15 @@ static struct argp_option options[] = {
     {"verbose",        'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output",0 },
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output",0 },
     {"input",          'i', "file",    0    , "input file",0 },
+    {"prefiltered",    'F', "file",    0    , "prefiltered input file for building contexts",0 },
     {"output",         'o', "file",    0    , "output file",0 },
     {"template",       'T', "file",    0    , "template file.",0 },
     {"tradius",        'r', "radius",  0    , "radius of the template ball",0 },
     {"tnorm",          'n', "norm",    0    , "norm of the template ball.",0 },
     {"tscale",         's', "integer", 0    , "scale of the template ball.",0 },
     {"tcenter",        'c', "bool",    0    , "include center in template.",0 },
-    {"maxdist",        'd', "integer", 0    , "output file",0 },
-    {"perr",           'p', "probability", 0, "output file",0 },
+    {"maxdist",        'd', "integer", 0    , "maximum patch distance",0 },
+    {"perr",           'p', "probability", 0, "error probability",0 },
     {"search",         'R', "radius",  0    , "output file",0 },
     {"decay",          'w', "rate",  0    , "weight decay as function of distance",0 },
     {"stats",          'S', "stats",    0    , "stats filename.",0 },
@@ -52,6 +53,7 @@ nlm_config_t parse_opt(int argc, char** argv ) {
     cfg.output_file = "denoised.pnm";
     cfg.stats_file = NULL;
     cfg.template_file = NULL;
+    cfg.prefiltered_file = NULL;
     cfg.template_radius = 4;
     cfg.template_norm = 2;
     cfg.template_center = 0 ; // exclude center
@@ -86,6 +88,9 @@ static error_t _parse_opt (int key, char *arg, struct argp_state *state) {
         break;
     case 'S':
         cfg->stats_file = arg;
+        break;
+    case 'F':
+        cfg->prefiltered_file = arg;
         break;
     case 'r':
         cfg->template_radius = atoi(arg);

@@ -131,8 +131,14 @@ void free_stats ( patch_node_t * pnode );
 
 /*---------------------------------------------------------------------------------------*/
 
-patch_node_t * cluster_stats ( patch_node_t* in, const index_t K, const index_t maxd);
+patch_node_t * cluster_stats ( 
+    patch_node_t* in, 
+    const index_t K, 
+    const index_t maxd, 
+    const index_t minoccu,
+    const index_t maxclusters);
 
+/*---------------------------------------------------------------------------------------*/
 
 void test_stats_iter(index_t k, patch_node_t* tree);
 
