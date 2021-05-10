@@ -168,6 +168,7 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
+
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
@@ -200,9 +201,6 @@ int main ( int argc, char* argv[] ) {
     apply_denoiser(&out, img, tpl, &cfg);
 
     printf ( "saving result...\n" );
-    // OVERRIDE since writing raw binary type is broken
-    out.info.type = 1;
-    out.info.encoding = PNM_ASCII;
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );

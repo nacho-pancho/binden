@@ -17,6 +17,7 @@
 #include "patches.h"
 #include "patch_mapper.h"
 #include "bitfun.h"
+#include "nlm_options.h"
 
 upixel_t* all_patches;
 
@@ -88,19 +89,16 @@ int patch_dist (const index_t i, const index_t j, const patch_template_t* tpl ) 
 }
 
 int main ( int argc, char* argv[] ) {
-    char ofname[ 128 ];
-    if ( argc < 2 ) {
-        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
-        return RESULT_ERROR;
-    }
-    const char* fname = argv[ 1 ];
-    image_t* img = read_pnm ( fname );
+
+    nlm_config_t cfg = parse_opt(argc,argv);
+    
+    image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {
-        fprintf ( stderr, "error opening image %s.\n", fname );
+        fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
         return RESULT_ERROR;
     }
     if ( img->info.result != RESULT_OK ) {
-        fprintf ( stderr, "error reading image %s.\n", fname );
+        fprintf ( stderr, "error reading image %s.\n", cfg.input_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
@@ -111,6 +109,7 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
+
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
@@ -170,15 +169,10 @@ int main ( int argc, char* argv[] ) {
     }
 
     printf ( "saving result...\n" );
-    snprintf ( ofname, 128, "nlm_%s", fname );
-    // OVERRIDE since writing raw binary type is broken
-    out.info.type = 1;
-    out.info.encoding = PNM_ASCII;
-    int res = write_pnm ( ofname, &out );
+    int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
-        fprintf ( stderr, "error writing image %s.\n", ofname );
+        fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
-
 
     printf ( "finishing...\n" );
     free ( all_patches );

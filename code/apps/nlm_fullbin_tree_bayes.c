@@ -17,22 +17,19 @@
 #include "patch_mapper.h"
 #include "bitfun.h"
 #include "stats.h"
-
+#include "nlm_options.h"
 
 int main ( int argc, char* argv[] ) {
-    char ofname[ 128 ];
-    if ( argc < 2 ) {
-        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
-        return RESULT_ERROR;
-    }
-    const char* fname = argv[ 1 ];
-    image_t* img = read_pnm ( fname );
+
+    nlm_config_t cfg = parse_opt(argc,argv);
+    
+    image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {
-        fprintf ( stderr, "error opening image %s.\n", fname );
+        fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
         return RESULT_ERROR;
     }
     if ( img->info.result != RESULT_OK ) {
-        fprintf ( stderr, "error reading image %s.\n", fname );
+        fprintf ( stderr, "error reading image %s.\n", cfg.input_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
@@ -43,6 +40,7 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
+
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
@@ -54,19 +52,16 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 3;
-    const int norm = 2;
-    const int exclude_center = 1;
-    const index_t maxd = 4;
-    const double perr = 0.05;
+    const index_t maxd = cfg.max_dist;
     index_t w[maxd];
     for (index_t d = 0; d < maxd; ++d) {
         w[d] = 1024/(d+1);
     }
 
     patch_template_t* tpl;
-
-    tpl = generate_ball_template ( radius, norm, exclude_center );
+    tpl = generate_ball_template ( cfg.template_radius, cfg.template_norm, cfg.template_center ? 0 : 1 );
+    sort_template(tpl,1);
+    const double perr = cfg.perr;
     //
     // non-local means
     // search a window of size R
@@ -109,15 +104,10 @@ int main ( int argc, char* argv[] ) {
     }
 
     printf ( "saving result...\n" );
-    snprintf ( ofname, 128, "nlm_%s", fname );
-    // OVERRIDE since writing raw binary type is broken
-    out.info.type = 1;
-    out.info.encoding = PNM_ASCII;
-    int res = write_pnm ( ofname, &out );
+    int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
-        fprintf ( stderr, "error writing image %s.\n", ofname );
+        fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
-
 
     printf ( "finishing...\n" );
     free_node(stats);
