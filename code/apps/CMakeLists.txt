@@ -1,10 +1,9 @@
 set(TARGETS 
 	quorum_den
-	nlm_original
-	nlm_semibin
-	nlm_fullbin_windowed_avg
-	nlm_fullbin_windowed_bayes
-	nlm_fullbin_tree_bayes
+	original_nlm
+	semibin_nlm
+	bin_nlm
+	bin_nlm_tree
 	bin_epll
 )
 foreach (aux ${TARGETS})
