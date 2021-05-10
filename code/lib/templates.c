@@ -155,26 +155,26 @@ patch_template_t * read_one_template ( FILE* fh ) {
     // read template size
     //
     int k = 0;
-    if (fscanf(fh," %d ",&k) < 1) {
-        fprintf(stderr,"Invalid template file \n");
+    if ( fscanf ( fh, " %d ", &k ) < 1 ) {
+        fprintf ( stderr, "Invalid template file \n" );
         return NULL;
     }
-    printf("template has %d positions.",k);
-    if (k <= 0) {
-        fprintf(stderr,"Invalid template file \n");
+    printf ( "template has %d positions.", k );
+    if ( k <= 0 ) {
+        fprintf ( stderr, "Invalid template file \n" );
         return NULL;
     }
-    
-    patch_template_t * pt = alloc_patch_template(k);
 
-    int i,j,r;
-    for (r = 0; fscanf(fh, " %d %d ",&i,&j) == 2 ; ++r) {
-        pt->coords[r].i = i;
-        pt->coords[r].j = j;
+    patch_template_t * pt = alloc_patch_template ( k );
+
+    int i, j, r;
+    for ( r = 0 ; fscanf ( fh, " %d %d ", &i, &j ) == 2 ; ++r ) {
+        pt->coords[ r ].i = i;
+        pt->coords[ r ].j = j;
     }
-    if (r < k) { // short of coordinates
-        fprintf(stderr,"Invalid template file \n");
-        free_patch_template(pt);
+    if ( r < k ) { // short of coordinates
+        fprintf ( stderr, "Invalid template file \n" );
+        free_patch_template ( pt );
         return NULL;
     }
     return pt;
@@ -183,13 +183,13 @@ patch_template_t * read_one_template ( FILE* fh ) {
 /*---------------------------------------------------------------------------------------*/
 
 patch_template_t * read_template ( const char * fname ) {
-    FILE* fh = fopen(fname,"r");
-    if (!fh) {
-        fprintf(stderr,"Cannot open template file %s\n",fname);
+    FILE* fh = fopen ( fname, "r" );
+    if ( !fh ) {
+        fprintf ( stderr, "Cannot open template file %s\n", fname );
         return NULL;
     }
-    patch_template_t* pt = read_one_template(fh);
-    fclose(fh);
+    patch_template_t* pt = read_one_template ( fh );
+    fclose ( fh );
     return pt;
 
 }
@@ -237,7 +237,7 @@ void print_template ( const patch_template_t * ptpl ) {
 
 void dump_template ( const patch_template_t * ptpl, FILE * ft ) {
     index_t k;
-    fprintf( ft, "%ld\n",k);
+    fprintf ( ft, "%ld\n", k );
     for ( k = 0 ; k < ptpl->k ; k++ ) {
         fprintf ( ft, "%3ld %3ld\n", ptpl->coords[ k ].i, ptpl->coords[ k ].j );
     }
@@ -246,13 +246,13 @@ void dump_template ( const patch_template_t * ptpl, FILE * ft ) {
 /*---------------------------------------------------------------------------------------*/
 
 int save_template ( const char* fname, const patch_template_t * ptpl ) {
-    FILE* fh = fopen(fname,"w");
-    if (!fh) {
-        fprintf(stderr,"Error writing template to file %s\n",fname);
+    FILE* fh = fopen ( fname, "w" );
+    if ( !fh ) {
+        fprintf ( stderr, "Error writing template to file %s\n", fname );
         return -1;
     }
-    dump_template(ptpl, fh);
-    fclose(fh);
+    dump_template ( ptpl, fh );
+    fclose ( fh );
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -380,16 +380,16 @@ patch_template_t * sort_template ( patch_template_t * orig, index_t in_place ) {
 
 /*---------------------------------------------------------------------------------------*/
 
-patch_template_t * dilate_template ( patch_template_t* in, index_t scale, index_t in_place) {
+patch_template_t * dilate_template ( patch_template_t* in, index_t scale, index_t in_place ) {
     patch_template_t* out;
-    if (in_place) {
+    if ( in_place ) {
         out = in;
     } else {
-        out = alloc_patch_template(in->k);
+        out = alloc_patch_template ( in->k );
     }
-    for ( index_t r = 0 ; r < in->k ; r++ ) { 
-        out->coords[r].i *= scale;
-        out->coords[r].j *= scale;
+    for ( index_t r = 0 ; r < in->k ; r++ ) {
+        out->coords[ r ].i *= scale;
+        out->coords[ r ].j *= scale;
     }
     return out;
 }

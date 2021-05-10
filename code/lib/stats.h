@@ -7,16 +7,16 @@
  * Tree structure to efficiently store and search for patches
  */
 typedef struct patch_node {
-    struct patch_node* children[ALPHA];
-    struct patch_node* parent; 
+    struct patch_node* children[ ALPHA ];
+    struct patch_node* parent;
     pixel_t value; // patch sample value corresponding to this node
     index_t occu; // number of occurences of this node
     index_t counts; // number of 1s
-    // not null if this is a cluster center: 
-    // each value indicates how many times the corresponding element 
+    // not null if this is a cluster center:
+    // each value indicates how many times the corresponding element
     // was found to be different from the same value in the center of the cluster
     // in other points that now belong to this cluster
-    index_t* diff; 
+    index_t* diff;
     char leaf;  // 1 if this node is a leaf
 } patch_node_t;
 
@@ -39,13 +39,13 @@ typedef struct neighbor_list {
 
 void free_node ( patch_node_t * node );
 
-void delete_node ( patch_node_t * node);
+void delete_node ( patch_node_t * node );
 
-void merge_nodes ( patch_node_t * dest, patch_node_t* src);
+void merge_nodes ( patch_node_t * dest, patch_node_t* src );
 
-void flatten_stats(patch_node_t* node, patch_node_t** node_list, index_t* pos);
+void flatten_stats ( patch_node_t* node, patch_node_t* * node_list, index_t* pos );
 
-void sort_stats(patch_node_t** node_list, index_t nnodes);
+void sort_stats ( patch_node_t* * node_list, index_t nnodes );
 
 /*
  * Gather patch statistics from an image, given a template
@@ -67,24 +67,24 @@ index_t get_patch_stats ( const patch_node_t * ptree, const patch_t * pctx );
 
 /*---------------------------------------------------------------------------------------*/
 
-patch_node_t* get_patch_node ( patch_node_t * ptree, patch_t * pctx );
+patch_node_t * get_patch_node ( patch_node_t * ptree, patch_t * pctx );
 
 /*---------------------------------------------------------------------------------------*/
 
-const patch_node_t* get_patch_node_const ( const patch_node_t * ptree, const patch_t * pctx );
+const patch_node_t * get_patch_node_const ( const patch_node_t * ptree, const patch_t * pctx );
 
 /*---------------------------------------------------------------------------------------*/
 
-neighbor_list_t find_neighbors ( 
-    patch_node_t* ptree, 
-    const patch_t* center, 
-    const index_t maxd);
+neighbor_list_t find_neighbors (
+    patch_node_t* ptree,
+    const patch_t* center,
+    const index_t maxd );
 
 /*---------------------------------------------------------------------------------------*/
 
 /**
  * fill target patch with the samples corresponding to the specified leaf
- */ 
+ */
 void get_leaf_patch ( patch_t * pctx, const patch_node_t * leaf );
 
 /*---------------------------------------------------------------------------------------*/
@@ -95,11 +95,11 @@ void print_patch_stats ( patch_node_t * pnode, index_t k );
 
 /*---------------------------------------------------------------------------------------*/
 
-void print_node_list(patch_node_t** node_list, const index_t nnodes, const index_t totoccu, patch_t* aux );
+void print_node_list ( patch_node_t* * node_list, const index_t nnodes, const index_t totoccu, patch_t* aux );
 
 /*---------------------------------------------------------------------------------------*/
 
-void summarize_stats(patch_node_t * pnode, index_t* nleaves, index_t* totoccu, index_t* totcount);
+void summarize_stats ( patch_node_t * pnode, index_t* nleaves, index_t* totoccu, index_t* totcount );
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -131,15 +131,15 @@ void free_stats ( patch_node_t * pnode );
 
 /*---------------------------------------------------------------------------------------*/
 
-patch_node_t * cluster_stats ( 
-    patch_node_t* in, 
-    const index_t K, 
-    const index_t maxd, 
+patch_node_t * cluster_stats (
+    patch_node_t * in,
+    const index_t K,
+    const index_t maxd,
     const index_t minoccu,
-    const index_t maxclusters);
+    const index_t maxclusters );
 
 /*---------------------------------------------------------------------------------------*/
 
-void test_stats_iter(index_t k, patch_node_t* tree);
+void test_stats_iter ( index_t k, patch_node_t* tree );
 
 #endif

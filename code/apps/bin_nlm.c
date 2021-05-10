@@ -2,8 +2,8 @@
  * binarized non-local means
  * the patches are binarized and compared as bit fields
  * the weights are of the form 1/d, with d = hamming distance
- * between the target and the src patch 
- * the center values are as in NLM, a simple average of the 
+ * between the target and the src patch
+ * the center values are as in NLM, a simple average of the
  * weighted samples.
  */
 #include <stdio.h>
@@ -47,11 +47,11 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
             // copy raw bytes: this bypasses sign, which is good for us
             memcpy ( all_patches + li * ko, q->values, ko * sizeof( upixel_t ) );
 #ifdef INSANE_DEBUG
-            printf("i %d j %d patch:",i,j);
-            for (int kk = 0; kk < ko; kk++) {
-                printf("%x ",*(all_patches + li*ko + kk));
+            printf ( "i %d j %d patch:", i, j );
+            for ( int kk = 0 ; kk < ko ; kk++ ) {
+                printf ( "%x ", *( all_patches + li * ko + kk ) );
             }
-            printf("\n");
+            printf ( "\n" );
 #endif
         }
     }
@@ -68,21 +68,21 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
  * bits between their binary representations.
  * we must handle raw bytes and conver them to the appropriate sizes
  */
-int patch_dist (const index_t i, const index_t j, const patch_template_t* tpl ) {
+int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl ) {
     const index_t nsamples = compute_binary_mapping_samples ( tpl->k );
     const upixel_t* samplesi = &all_patches[ nsamples * i ];
     const upixel_t* samplesj = &all_patches[ nsamples * j ];
 #ifdef INSANE_DEBUG
-    printf("dist: patch %d:",i);
-    for (int kk = 0; kk < nsamples; kk++) {
-        printf("%x ", samplesi[kk] );
+    printf ( "dist: patch %d:", i );
+    for ( int kk = 0 ; kk < nsamples ; kk++ ) {
+        printf ( "%x ", samplesi[ kk ] );
     }
-    printf("\n");
-    printf("dist: patch %d:",j);
-    for (int kk = 0; kk < nsamples; kk++) {
-        printf("%x ",samplesj[kk] );
+    printf ( "\n" );
+    printf ( "dist: patch %d:", j );
+    for ( int kk = 0 ; kk < nsamples ; kk++ ) {
+        printf ( "%x ", samplesj[ kk ] );
     }
-    printf("\n");
+    printf ( "\n" );
 #endif
     int d = 0;
     for ( index_t k = 0 ; k < nsamples ; ++k ) {
@@ -94,19 +94,19 @@ int patch_dist (const index_t i, const index_t j, const patch_template_t* tpl ) 
 
 /*---------------------------------------------------------------------------------------*/
 
-index_t apply_denoiser(image_t* out, const image_t* img, 
-    const patch_template_t* tpl, nlm_config_t* cfg) {
+index_t apply_denoiser ( image_t* out, const image_t* img,
+                         const patch_template_t* tpl, nlm_config_t* cfg ) {
 
     const index_t R = cfg->search_radius;
     const index_t maxd = cfg->max_dist;
     const double perr = cfg->perr;
 
-    index_t w[maxd];
-    for (index_t d = 0; d < maxd; ++d) {
-        w[d] = 1024/((d>>cfg->decay)+1);
-	printf("dist %ld weight %ld\n",d,w[d]);
+    index_t w[ maxd ];
+    for ( index_t d = 0 ; d < maxd ; ++d ) {
+        w[ d ] = 1024 / ( ( d >> cfg->decay ) + 1 );
+        printf ( "dist %ld weight %ld\n", d, w[ d ] );
     }
-    
+
     const int m = img->info.height;
     const int n = img->info.width;
     index_t oned = 0;
@@ -121,40 +121,40 @@ index_t apply_denoiser(image_t* out, const image_t* img,
             int dj1 = j < ( n - R ) ? j + R : n;
             for ( int di = di0 ; di < di1 ; ++di ) {
                 for ( int dj = dj0 ; dj < dj1 ; ++dj ) {
-                    const index_t lj = di*n + dj;
-                    const int d = patch_dist (li, lj, tpl );
-                    if (d > maxd) {
+                    const index_t lj = di * n + dj;
+                    const int d = patch_dist ( li, lj, tpl );
+                    if ( d > maxd ) {
                         continue;
                     }
-                    if (get_pixel ( img, di, dj )) {
-                        y += w[d-1];                    
+                    if ( get_pixel ( img, di, dj ) ) {
+                        y += w[ d - 1 ];
                     }
-                    norm += w[d-1];
+                    norm += w[ d - 1 ];
                 }
             }
-            const pixel_t z = get_linear_pixel(img, li);
-            const pixel_t x = cfg->denoiser(z,y,norm,perr);
-            if (z != x) {
-                set_linear_pixel ( out, li, x);
-                if (x) 
+            const pixel_t z = get_linear_pixel ( img, li );
+            const pixel_t x = cfg->denoiser ( z, y, norm, perr );
+            if ( z != x ) {
+                set_linear_pixel ( out, li, x );
+                if ( x )
                     oned++;
                 else
                     zeroed++;
             }
         }
-        if (!(i % 50)) {
-            printf("| %6d | 1->0 %8ld | 0->1 %8ld |\n",i,zeroed,oned);
+        if ( !( i % 50 ) ) {
+            printf ( "| %6d | 1->0 %8ld | 0->1 %8ld |\n", i, zeroed, oned );
         }
     }
-    return zeroed+oned;
+    return zeroed + oned;
 }
 
 /*---------------------------------------------------------------------------------------*/
 
 int main ( int argc, char* argv[] ) {
 
-    nlm_config_t cfg = parse_opt(argc,argv);
-    
+    nlm_config_t cfg = parse_opt ( argc, argv );
+
     image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {
         fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
@@ -166,7 +166,7 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
-    if ( img->info.maxval > 1) {
+    if ( img->info.maxval > 1 ) {
         fprintf ( stderr, "only binary images supported.\n" );
         pixels_free ( img->pixels );
         free ( img );
@@ -184,8 +184,8 @@ int main ( int argc, char* argv[] ) {
     //
     patch_template_t* tpl;
     tpl = generate_ball_template ( cfg.template_radius, cfg.template_norm, cfg.template_center ? 0 : 1 );
-    sort_template(tpl,1);
-    dilate_template(tpl,cfg.template_scale,1);
+    sort_template ( tpl, 1 );
+    dilate_template ( tpl, cfg.template_scale, 1 );
 
     //
     // non-local means
@@ -195,11 +195,11 @@ int main ( int argc, char* argv[] ) {
     extract_patches ( img, tpl );
 
     printf ( "denoising / first pass....\n" );
-    apply_denoiser(&out, img, tpl, &cfg);
+    apply_denoiser ( &out, img, tpl, &cfg );
 
     printf ( "denoising / second pass....\n" );
     extract_patches ( &out, tpl );
-    apply_denoiser(&out, img, tpl, &cfg);
+    apply_denoiser ( &out, img, tpl, &cfg );
 
     printf ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );

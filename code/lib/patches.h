@@ -27,14 +27,14 @@ void free_patch ( patch_t * p );
 
 void get_patch ( const image_t * pimg, const patch_template_t * ptpl, int i, int j, patch_t * ppatch );
 
-void get_mapped_patch ( const image_t * pimg, const patch_template_t * ptpl, 
-    int i, int j, patch_mapper_t mapper, patch_t * ppatch, patch_t* mapped );
+void get_mapped_patch ( const image_t * pimg, const patch_template_t * ptpl,
+                        int i, int j, patch_mapper_t mapper, patch_t * ppatch, patch_t* mapped );
 
-void get_linear_patch ( const image_t * pimg, const linear_template_t * ptpl, 
-    int i, int j, patch_t * ppatch );
+void get_linear_patch ( const image_t * pimg, const linear_template_t * ptpl,
+                        int i, int j, patch_t * ppatch );
 
-void get_mapped_linear_patch ( const image_t * pimg, const linear_template_t * ptpl, 
-    int i, int j, patch_mapper_t mapper, patch_t * ppatch, patch_t * mapped );
+void get_mapped_linear_patch ( const image_t * pimg, const linear_template_t * ptpl,
+                               int i, int j, patch_mapper_t mapper, patch_t * ppatch, patch_t * mapped );
 
 void print_patch ( const patch_t * ppatch );
 

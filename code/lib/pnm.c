@@ -172,12 +172,12 @@ image_t * read_pnm ( const char * fname ) {
 
     img->info = info;
     img->pixels = pixels_alloc ( &info );
-    if (read_all ( fhandle, &img->info, img->pixels ) != RESULT_OK) {
-        fprintf( stderr, "pnm: error while reading pixels.\n");
-    	fclose(fhandle);
-    	return NULL;
+    if ( read_all ( fhandle, &img->info, img->pixels ) != RESULT_OK ) {
+        fprintf ( stderr, "pnm: error while reading pixels.\n" );
+        fclose ( fhandle );
+        return NULL;
     }
-    fclose(fhandle);
+    fclose ( fhandle );
     return img;
 }
 //
@@ -235,7 +235,7 @@ int read_pixels ( FILE * fhandle, const int depth, const int channels, const int
         }
         return RESULT_OK;
     } else { // 1 bit binary
-        fprintf(stderr,"Cannot read single pixels in binary-encoded bi-level images!");
+        fprintf ( stderr, "Cannot read single pixels in binary-encoded bi-level images!" );
         return RESULT_ERROR;
     }
 }
@@ -243,22 +243,22 @@ int read_pixels ( FILE * fhandle, const int depth, const int channels, const int
 //---------------------------------------------------------------------------------------------
 //
 int read_rows ( FILE * fhandle, const image_info_t * info, const int nrows, pixel_t * pixels ) {
-    if (info->type != 4) {
-        const int npixels = nrows * info->width;        
+    if ( info->type != 4 ) {
+        const int npixels = nrows * info->width;
         return read_pixels ( fhandle, info->depth, info->channels, info->encoding, npixels, pixels );
     } else {
         index_t ncols = info->width;
         for ( int i = 0, li = 0 ; i < nrows ; i++ ) {
             unsigned char buffer = 0x00;
             unsigned char mask   = 0x00;
-            for (int j = 0; j < ncols; ++j, ++li) {
+            for ( int j = 0 ; j < ncols ; ++j, ++li ) {
                 if ( ( pixels[ li ] = read_sample_1 ( fhandle, &buffer, &mask ) ) == RESULT_ERROR ) {
-                    fprintf(stderr,"error reading PBM row %d col %d\n",i,j);                    
+                    fprintf ( stderr, "error reading PBM row %d col %d\n", i, j );
                     return RESULT_ERROR;
                 }
             }
-        }        
-        printf("read %lu bytes\n",bytes_read);
+        }
+        printf ( "read %lu bytes\n", bytes_read );
         return RESULT_OK;
     }
 }
@@ -301,7 +301,7 @@ int write_pixels ( const int depth, const int channels, const int encoding, cons
         return RESULT_OK;
 
     } else {
-        fprintf(stderr,"Cannot write single pixels in PNM mode 4.");
+        fprintf ( stderr, "Cannot write single pixels in PNM mode 4." );
         return RESULT_ERROR;
     }
 }
@@ -309,7 +309,7 @@ int write_pixels ( const int depth, const int channels, const int encoding, cons
 //---------------------------------------------------------------------------------------------
 //
 int write_rows ( const image_info_t * info, const int nrows, const pixel_t * pixels, FILE * fhandle ) {
-    if (info->type != 4) {
+    if ( info->type != 4 ) {
         const int npixels = nrows * info->width;
         return write_pixels ( info->depth, info->channels, info->encoding, npixels, pixels, fhandle );
     } else {
@@ -321,16 +321,16 @@ int write_rows ( const image_info_t * info, const int nrows, const pixel_t * pix
                 if ( write_sample_1 ( pixels[ li ], fhandle, &buffer, &mask ) == RESULT_ERROR ) {
                     return RESULT_ERROR;
                 }
-            }            
+            }
             //
             // flush trailing bits
             //
-            if (mask != 0x80) { // there are bits in the buffer
-                fputc(buffer,fhandle);
+            if ( mask != 0x80 ) { // there are bits in the buffer
+                fputc ( buffer, fhandle );
                 bytes_written++;
             }
         }
-        printf("wrote %lu bytes\n",bytes_written);
+        printf ( "wrote %lu bytes\n", bytes_written );
         return RESULT_OK;
     }
 }
@@ -352,7 +352,7 @@ static int skip_comments ( FILE * fp ) {
     while ( ( ch = fgetc ( fp ) ) != EOF && isspace ( ch ) )
         ;
     if ( ch == '#' ) {
-        if (fgets ( line, sizeof( line ), fp ) == NULL)
+        if ( fgets ( line, sizeof( line ), fp ) == NULL )
             return RESULT_ERROR;
         skip_comments ( fp );
     } else
@@ -379,7 +379,7 @@ static int read_sample_8 ( FILE * fhandle ) {
 //
 //---------------------------------------------------------------------------------------------
 //
-static int read_sample_1 ( FILE * fhandle, unsigned char* pbuffer, unsigned char* pmask ) { 
+static int read_sample_1 ( FILE * fhandle, unsigned char* pbuffer, unsigned char* pmask ) {
     int res;
     unsigned char val;
     if ( *pmask == 0 ) {
@@ -421,7 +421,7 @@ static int write_sample_8 ( int c, FILE * fhandle ) {
 //
 //---------------------------------------------------------------------------------------------
 //
-static int write_sample_1 ( int v, FILE * fhandle, unsigned char* pbuffer, unsigned char* pmask ) { 
+static int write_sample_1 ( int v, FILE * fhandle, unsigned char* pbuffer, unsigned char* pmask ) {
     int res;
     // write bit
     if ( v ) {

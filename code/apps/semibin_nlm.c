@@ -16,11 +16,11 @@
 #include "patch_mapper.h"
 #include "bitfun.h"
 
-pixel_t remove_mean(patch_t* p) {
+pixel_t remove_mean ( patch_t* p ) {
     int mean = 0;
     for ( int r = 0 ; r < p->k ; ++r )
         mean += p->values[ r ];
-    const index_t mu = (index_t) (mean / p->k);
+    const index_t mu = ( index_t ) ( mean / p->k );
     for ( int r = 0 ; r < p->k ; ++r )
         p->values[ r ] -= mu;
     return mu;
@@ -50,7 +50,7 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
             //
             // remove mean
             //
-            all_means[li] = remove_mean(p);
+            all_means[ li ] = remove_mean ( p );
             //
             // binarize
             //
@@ -58,11 +58,11 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
             // copy raw bytes: this bypasses sign, which is good for us
             memcpy ( all_patches + li * ko, q->values, ko * sizeof( upixel_t ) );
 #ifdef INSANE_DEBUG
-            printf("i %d j %d patch:",i,j);
-            for (int kk = 0; kk < ko; kk++) {
-                printf("%x ",*(all_patches + li*ko + kk));
+            printf ( "i %d j %d patch:", i, j );
+            for ( int kk = 0 ; kk < ko ; kk++ ) {
+                printf ( "%x ", *( all_patches + li * ko + kk ) );
             }
-            printf("\n");
+            printf ( "\n" );
 #endif
         }
     }
@@ -77,21 +77,21 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
  * bits between their binary representations.
  * we must handle raw bytes and conver them to the appropriate sizes
  */
-int patch_dist (const index_t i, const index_t j, const patch_template_t* tpl ) {
+int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl ) {
     const index_t nsamples = compute_binary_mapping_samples ( tpl->k );
     const upixel_t* samplesi = &all_patches[ nsamples * i ];
     const upixel_t* samplesj = &all_patches[ nsamples * j ];
 #ifdef INSANE_DEBUG
-    printf("dist: patch %d:",i);
-    for (int kk = 0; kk < nsamples; kk++) {
-        printf("%x ", samplesi[kk] );
+    printf ( "dist: patch %d:", i );
+    for ( int kk = 0 ; kk < nsamples ; kk++ ) {
+        printf ( "%x ", samplesi[ kk ] );
     }
-    printf("\n");
-    printf("dist: patch %d:",j);
-    for (int kk = 0; kk < nsamples; kk++) {
-        printf("%x ",samplesj[kk] );
+    printf ( "\n" );
+    printf ( "dist: patch %d:", j );
+    for ( int kk = 0 ; kk < nsamples ; kk++ ) {
+        printf ( "%x ", samplesj[ kk ] );
     }
-    printf("\n");
+    printf ( "\n" );
 #endif
     int d = 0;
     for ( index_t k = 0 ; k < nsamples ; ++k ) {
@@ -145,7 +145,7 @@ int main ( int argc, char* argv[] ) {
 
     printf ( "denoising....\n" );
     const int R = 20;
-    const double h = argc < 3 ? 1.4: atof(argv[2]);
+    const double h = argc < 3 ? 1.4 : atof ( argv[ 2 ] );
     const double C = -0.5 / ( h * h );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
@@ -158,18 +158,18 @@ int main ( int argc, char* argv[] ) {
             int dj1 = j < ( n - R ) ? j + R : n;
             for ( int di = di0 ; di < di1 ; ++di ) {
                 for ( int dj = dj0 ; dj < dj1 ; ++dj ) {
-                    const index_t lj = di*n + dj;
-                    const int d = patch_dist (li, lj, tpl );
+                    const index_t lj = di * n + dj;
+                    const int d = patch_dist ( li, lj, tpl );
                     const double w = exp ( C * d );
 #ifdef INSANE_DEBUG
-                    printf("d %d w %f\n",d, w);
-#endif                
-                    y += w * (get_pixel ( img, di, dj ) - all_means[lj]);                    
+                    printf ( "d %d w %f\n", d, w );
+#endif
+                    y += w * ( get_pixel ( img, di, dj ) - all_means[ lj ] );
                     norm += w;
                 }
             }
-            const int x = ( int ) ( 0.5 + all_means[li] + y / norm );
-            set_linear_pixel ( &out, li, x > 0 ? (x < 255 ? x: 255): 0);
+            const int x = ( int ) ( 0.5 + all_means[ li ] + y / norm );
+            set_linear_pixel ( &out, li, x > 0 ? ( x < 255 ? x : 255 ) : 0 );
         }
     }
 

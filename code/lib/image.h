@@ -36,7 +36,7 @@ pixel_t * pixels_alloc ( const image_info_t * info );
 //
 void pixels_free ( pixel_t * pix );
 
-pixel_t* pixels_copy ( const image_info_t* info, const pixel_t * pix );
+pixel_t * pixels_copy ( const image_info_t* info, const pixel_t * pix );
 
 int get_pixel ( const image_t * pimg, const int i, const int j );
 

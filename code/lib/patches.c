@@ -36,13 +36,13 @@ void get_patch ( const image_t * pimg, const patch_template_t * ptpl, int i, int
 
 /*---------------------------------------------------------------------------------------*/
 
-void get_mapped_patch ( const image_t * pimg, const patch_template_t * ptpl, 
-    int i, int j, patch_mapper_t mapper, patch_t * pctx, patch_t* pmapped ) {
-    if (pmapped == NULL) {
+void get_mapped_patch ( const image_t * pimg, const patch_template_t * ptpl,
+                        int i, int j, patch_mapper_t mapper, patch_t * pctx, patch_t* pmapped ) {
+    if ( pmapped == NULL ) {
         pmapped = pctx; // DESTRUCTIVE
-    }        
-    get_patch(pimg,ptpl,i,j,pctx);
-    mapper( pctx, pmapped );
+    }
+    get_patch ( pimg, ptpl, i, j, pctx );
+    mapper ( pctx, pmapped );
 }
 
 /*---------------------------------------------------------------------------------------*/
@@ -60,13 +60,13 @@ void get_linear_patch ( const image_t * pimg, const linear_template_t * ptpl, in
 
 /*---------------------------------------------------------------------------------------*/
 
-void get_mapped_linear_patch ( const image_t * pimg, const linear_template_t * ptpl, int i, int j, 
-    patch_mapper_t mapper, patch_t * pctx, patch_t* pmapped ) {        
-    if (pmapped == NULL) {
+void get_mapped_linear_patch ( const image_t * pimg, const linear_template_t * ptpl, int i, int j,
+                               patch_mapper_t mapper, patch_t * pctx, patch_t* pmapped ) {
+    if ( pmapped == NULL ) {
         pmapped = pctx; // DESTRUCTIVE
-    }        
-    get_linear_patch(pimg,ptpl,i,j,pctx);    
-    mapper( pctx, pmapped );
+    }
+    get_linear_patch ( pimg, ptpl, i, j, pctx );
+    mapper ( pctx, pmapped );
 }
 
 
@@ -85,7 +85,7 @@ void print_patch ( const patch_t * pctx ) {
 void print_binary_patch ( const patch_t * pctx ) {
     int j;
     for ( j = 0 ; j < pctx->k ; j++ ) {
-        fputc( pctx->values[ j ] ?'1':'0', stdout);
+        fputc ( pctx->values[ j ] ? '1' : '0', stdout );
     }
 }
 
@@ -156,15 +156,15 @@ void print_binary_patch_fancy ( const patch_t* patch, const patch_template_t * p
     index_t b = max_j - min_j;
     printf ( "+" );
     for ( r = 0 ; r <= b ; r++ ) {
-      putchar((r+min_j)%5 ? '-':'+');
+        putchar ( ( r + min_j ) % 5 ? '-' : '+' );
     }
     putchar ( '\n' );
     for ( k = 0 ; k <= a ; k++ ) {
-      putchar((min_i+k) % 5 ?'|':'+');
+        putchar ( ( min_i + k ) % 5 ? '|' : '+' );
         for ( r = 0 ; r <= b ; r++ ) {
             for ( l = 0 ; l < ptpl->k ; l++ ) {
                 if ( ( ptpl->coords[ l ].i == ( min_i + k ) ) && ( ptpl->coords[ l ].j == ( min_j + r ) ) ) {
-		  putchar ( patch->values[ l ] ? '1':'0');
+                    putchar ( patch->values[ l ] ? '1' : '0' );
                     break;
                 }
             }

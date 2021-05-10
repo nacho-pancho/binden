@@ -23,8 +23,8 @@ void pixels_free ( pixel_t * pix ) {
 pixel_t * pixels_copy ( const image_info_t * info, const pixel_t* src ) {
     const int npixels = info->channels * info->width * info->height;
     assert ( npixels > 0 );
-    pixel_t* dest = pixels_alloc(info);
-    memcpy( dest, src, npixels * sizeof( pixel_t) );
+    pixel_t* dest = pixels_alloc ( info );
+    memcpy ( dest, src, npixels * sizeof( pixel_t ) );
     return dest;
 }
 

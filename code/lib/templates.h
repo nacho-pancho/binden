@@ -41,7 +41,7 @@ patch_template_t * generate_random_template ( index_t radius, index_t norm, inde
 
 patch_template_t * generate_ball_template ( index_t radius, index_t norm, index_t exclude_center );
 
-patch_template_t * dilate_template ( patch_template_t* in, index_t scale, index_t in_place);
+patch_template_t * dilate_template ( patch_template_t * in, index_t scale, index_t in_place );
 
 linear_template_t * linearize_template ( const patch_template_t * pt, index_t nrows, index_t ncols );
 
