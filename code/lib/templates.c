@@ -155,13 +155,13 @@ patch_template_t * read_one_template ( FILE* fh ) {
     // read template size
     //
     int k = 0;
-    if ( fscanf ( fh, " %d ", &k ) < 1 ) {
-        fprintf ( stderr, "Invalid template file \n" );
+    if ( fscanf ( fh, " %d", &k ) < 1 ) {
+        fprintf ( stderr, "Invalid template file (reading header) \n" );
         return NULL;
     }
     printf ( "template has %d positions.", k );
     if ( k <= 0 ) {
-        fprintf ( stderr, "Invalid template file \n" );
+        fprintf ( stderr, "Invalid template file (invalid size)\n" );
         return NULL;
     }
 
@@ -173,7 +173,7 @@ patch_template_t * read_one_template ( FILE* fh ) {
         pt->coords[ r ].j = j;
     }
     if ( r < k ) { // short of coordinates
-        fprintf ( stderr, "Invalid template file \n" );
+        fprintf ( stderr, "Invalid template file (reading line %d)\n",r );
         free_patch_template ( pt );
         return NULL;
     }

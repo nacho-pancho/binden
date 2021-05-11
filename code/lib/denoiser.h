@@ -11,22 +11,22 @@
  * \param m size of the (sub)sequence
  * \param d crossover probability
  */
-typedef int ( * denoiser_f )( int z, int k, int m, double d );
+typedef double ( * denoiser_f )( double z, double k, double m, double d );
 
 /**
  * dumbest rule: ignores z and d; returns 1 if 2k > m and 0 otherwise
  */
-int majority ( int z, int k, int m, double d );
+double majority ( double z, double k, double m, double d );
 
 /**
  * Bayes risk minimization (using Hamming loss)
  */
-int bayes ( int z, int k, int m, double d );
+double bayes ( double z, double k, double m, double d );
 
 /**
  * Discrete Universal Denoiser, BSC channel
  */
-int dude ( int z, int k, int m, double d );
+double dude ( double z, double k, double m, double d );
 
 
 

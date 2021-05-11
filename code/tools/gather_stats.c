@@ -86,7 +86,7 @@ int main ( int argc, char * * argv ) {
      */
     patch_template_t* template;
     template = read_template ( cfg.template_file );
-    if ( template->k == 0 ) {
+    if ( !template || (template->k == 0) ) {
         error ( "Invalid template or missing template file.\n" );
         exit ( 1 );
     }

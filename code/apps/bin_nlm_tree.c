@@ -27,9 +27,9 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
     const index_t maxd = cfg->max_dist;
     const double perr = cfg->perr;
 
-    index_t w[ maxd ];
-    for ( index_t d = 0 ; d < maxd ; ++d ) {
-        w[ d ] = 1024 / ( d + 1 );
+    double w[ maxd+1 ];
+    for ( index_t d = 0 ; d <= maxd ; ++d ) {
+        w[ d ] = 1.0 / ( d + 1.0 );
     }
     patch_t* Pij = alloc_patch ( tpl->k );
     index_t changed = 0;
@@ -39,19 +39,21 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             get_patch ( img, tpl, i, j, Pij );
-            index_t y = 0;
-            index_t norm = 0;
+            double y = 0;
+            double norm = 0;
             neighbor_list_t neighbors = find_neighbors ( stats, Pij, maxd );
+            if (neighbors.number == 0) {
+                printf("warning: no neighbors!\n");
+            }
             for ( int i = 0 ; i < neighbors.number ; ++i ) {
                 const index_t d = neighbors.neighbors[ i ].dist;
-                if ( d == 0 ) continue;
                 const patch_node_t* node = neighbors.neighbors[ i ].patch_node;
-                y += w[ d - 1 ] * node->counts;
-                norm += w[ d - 1 ] * node->occu;
+                y += w[ d ] * (double) node->counts;
+                norm += w[ d ] * (double) node->occu;
             }
             free ( neighbors.neighbors );
             const pixel_t z = get_linear_pixel ( img, li );
-            const pixel_t x = cfg->denoiser ( z, y, norm, perr );
+            const pixel_t x = (pixel_t) cfg->denoiser ( z, y, norm, perr );
             if ( z != x ) {
                 set_linear_pixel ( out, li, x );
                 changed++;
@@ -127,7 +129,6 @@ int main ( int argc, char* argv[] ) {
     // gather patch stats
     //
     patch_node_t* stats;
-    printf ( "extracting patches....\n" );
     if ( cfg.stats_file ) {
         //
         // load patches from a file
@@ -135,6 +136,7 @@ int main ( int argc, char* argv[] ) {
         // generated from this image, but the template
         // must have been the same
         //
+        printf ( "loading patch statistics from file....\n" );
         stats = load_stats ( cfg.stats_file );
         if ( !stats ) {
             fprintf ( stderr, "could not load stats from %s.\n", cfg.stats_file );
@@ -144,12 +146,14 @@ int main ( int argc, char* argv[] ) {
             return RESULT_ERROR;
         }
     } else {
+        printf ( "gathering patch stats from image....\n" );
         stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
     }
     const index_t minoccu = 100;
-    const index_t maxclusters = 1000;
+    const index_t maxclusters = 100000;
+    printf ( "clustering patches....\n" );
     patch_node_t * clustered = cluster_stats ( stats, tpl->k, cfg.max_dist, minoccu, maxclusters );
-    //print_patch_stats ( clustered, tpl->k );
+    print_patch_stats ( clustered, tpl->k );
 
     printf ( "denoising....\n" );
     apply_denoiser ( &out, img, tpl, clustered, &cfg );
