@@ -18,6 +18,7 @@ typedef struct nlm_config {
     int template_center;
     int template_scale;
     int search_radius;
+    int max_clusters;
     int max_dist;
     double perr;
     int decay;

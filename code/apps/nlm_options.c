@@ -17,6 +17,7 @@ static struct argp_option options[] = {
     {"tscale",         's', "integer", 0, "scale of the template ball.", 0 },
     {"tcenter",        'c', "bool",    0, "include center in template.", 0 },
     {"maxdist",        'd', "integer", 0, "maximum patch distance", 0 },
+    {"maxclusters",    'C', "number",  0, "maximum number of clusters", 0 },
     {"perr",           'p', "probability", 0, "error probability", 0 },
     {"search",         'R', "radius",  0, "output file", 0 },
     {"decay",          'w', "rate",  0, "weight decay as function of distance", 0 },
@@ -60,6 +61,7 @@ nlm_config_t parse_opt ( int argc, char* * argv ) {
     cfg.template_scale  = 1;  // exclude center
     cfg.search_radius = 40;
     cfg.max_dist = 10;
+    cfg.max_clusters = 10000;
     cfg.perr = 0.1;
     cfg.decay = 1;
     cfg.denoiser = majority;
@@ -103,6 +105,9 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'c':
         cfg->template_center = atoi ( arg );
+        break;
+    case 'C':
+        cfg->max_clusters = atoi ( arg );
         break;
     case 'd':
         cfg->max_dist = atoi ( arg );

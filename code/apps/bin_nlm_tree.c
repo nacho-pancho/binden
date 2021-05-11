@@ -149,12 +149,14 @@ int main ( int argc, char* argv[] ) {
         printf ( "gathering patch stats from image....\n" );
         stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
     }
+#if 1
     const index_t minoccu = 100;
-    const index_t maxclusters = 100000;
     printf ( "clustering patches....\n" );
-    patch_node_t * clustered = cluster_stats ( stats, tpl->k, cfg.max_dist, minoccu, maxclusters );
+    patch_node_t * clustered = cluster_stats ( stats, tpl->k, cfg.max_dist, minoccu, cfg.max_clusters );
     print_patch_stats ( clustered, tpl->k );
-
+#else
+    patch_node_t* clustered = stats;
+#endif
     printf ( "denoising....\n" );
     apply_denoiser ( &out, img, tpl, clustered, &cfg );
 
@@ -165,7 +167,8 @@ int main ( int argc, char* argv[] ) {
     }
 
     printf ( "finishing...\n" );
-    free_node ( clustered );
+    if (clustered != stats)
+        free_node ( clustered );
     free_node ( stats );
     free_patch_template ( tpl );
     pixels_free ( img->pixels );
