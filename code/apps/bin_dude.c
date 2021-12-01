@@ -1,5 +1,6 @@
 /**
- * quorum denoiser
+ * Discrete Universal DEnoiser
+ *
  * given a template, patches are classified according to their
  * sum. Statistics are gathered for each sum value, and
  * then a Bayesian minimum-risk rule is used to decide upon
@@ -14,9 +15,10 @@
 #include "image.h"
 #include "templates.h"
 #include "patches.h"
-//#include "patch_mapper.h"
+#include "stats.h"
 #include "bitfun.h"
-
+#include "nlm_options.h"
+#include "templates.h"
 /**
  * pseudo-image where each pixel's value contains the sum
  * of its patch samples
@@ -42,49 +44,12 @@ index_t* quorum_freq_1;
  */
 double* quorum_prob;
 
-index_t patch_sums ( const image_t* img, const image_t* ctximg, const patch_template_t* tpl,
-                     index_t* quorum_map, index_t* quorum_freq, index_t* quorum_freq_1 ) {
-    //
-    // determine total number of patches in image
-    //
-    if ( ctximg == NULL ) {
-        ctximg = img;
-    }
-    const index_t n = img->info.width;
-    const index_t m = img->info.height;
-    index_t total = 0;
-    patch_t* p = alloc_patch ( tpl->k );
-    linear_template_t* ltpl = linearize_template ( tpl, m, n );
-    for ( int i = 0, li = 0 ; i < m ; ++i ) {
-        for ( int j = 0 ; j < n ; ++j, ++li ) {
-            get_linear_patch ( ctximg, ltpl, i, j, p );
-            //
-            // sum
-            //
-            index_t a = 0;
-            for ( int k = 0 ; k < ltpl->k ; ++k ) {
-                a += p->values[ k ];
-            }
-            quorum_map[ li ] = a;
-            quorum_freq[ a ]++;
-            if ( get_linear_pixel ( img, li ) ) {
-                quorum_freq_1[ a ]++;
-            }
-            total++;
-        }
-    }
-    free_linear_template ( ltpl );
-    free_patch ( p );
-    return total;
-}
 
 index_t apply_denoiser (
     image_t* out, const image_t* in,
     const double perr,
-    const index_t k,
-    const index_t* quorum_map,
-    const index_t* quorum_freq,
-    const index_t* quorum_freq_1 ) {
+    const patch_template_t* tpl,
+    patch_node_t* stats) {
 
     const double p0 = perr;
     const double p1 = 1.0 - perr;
@@ -92,29 +57,20 @@ index_t apply_denoiser (
     const int m = in->info.height;
     const int n = in->info.width;
     const index_t total = m * n;
-    double* quorum_prob = ( double* ) calloc ( k + 1,  sizeof( double ) );
-
-    for ( int r = 0 ; r < k ; ++r ) {
-        quorum_prob[ r ] = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
-    }
-    printf ( "estimating probabilities (Krichevskii-Trofimoff)....\n" );
-    for ( int r = 0 ; r < k + 1 ; ++r ) {
-        quorum_prob[ r ]   = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
-        const double PS  = ( double ) quorum_freq[ r ]  / ( double ) total;
-        const double PS1 = ( double ) quorum_freq_1[ r ] / ( double ) total;
-        printf ( "sum %3d P(S)=%8.6f P(1,S)=%8.6f P(1|S) %8.6f\n", r, PS, PS1, quorum_prob[ r ] );
-    }
 
     printf ( "denoising....\n" );
     index_t changed = 0;
+    const index_t k = tpl->k;
+    patch_t* Pij = alloc_patch ( k );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             //
             // denoising rule:
             //
+            get_patch ( in, tpl, i, j, Pij );
             const pixel_t z = get_linear_pixel ( in, li );
-            const int S = quorum_map[ li ];
-            const double q = quorum_prob[ S ];
+            const patch_node_t* patch_stats  = get_patch_node( stats, Pij );
+            const double q = (0.5 + (double)patch_stats->counts) / (1.0 + (double) patch_stats->occu); 
             if ( z && ( q < p0 ) ) {
                 //printf("%d %d S=%d q=%8.6f: 1 -> 0\n",i,j,S,q);
                 changed++;
@@ -126,27 +82,26 @@ index_t apply_denoiser (
             }
         }
     }
+    free_patch ( Pij );
     printf ( "Changed %ld pixels\n", changed );
     free ( quorum_prob );
     return changed;
 }
 
 int main ( int argc, char* argv[] ) {
-    char ofname[ 128 ];
-    if ( argc < 2 ) {
-        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
-        return RESULT_ERROR;
-    }
-    const char* fname = argv[ 1 ];
 
-    image_t* img = read_pnm ( fname );
+    char ofname[ 128 ];
+    image_t out;
+    nlm_config_t cfg = parse_opt ( argc, argv );
+
+    image_t* img = read_pnm ( cfg.input_file );
 
     if ( img == NULL ) {
-        fprintf ( stderr, "error opening image %s.\n", fname );
+        fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
         return RESULT_ERROR;
     }
     if ( img->info.result != RESULT_OK ) {
-        fprintf ( stderr, "error reading image %s.\n", fname );
+        fprintf ( stderr, "error reading image %s.\n", cfg.input_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
@@ -157,7 +112,20 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
-    image_t out;
+
+    image_t* pre = img;
+    if ( cfg.prefiltered_file != NULL ) {
+        pre = read_pnm ( cfg.prefiltered_file );
+        if ( pre->info.result != RESULT_OK ) {
+            fprintf ( stderr, "error reading prefiltered image %s.\n", cfg.prefiltered_file );
+            pixels_free ( pre->pixels );
+            pixels_free ( img->pixels );
+            free ( img );
+            free ( pre );
+            return RESULT_ERROR;
+        }
+    }
+
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
     //
@@ -166,7 +134,7 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 8;
+    const int radius = 2;
     const int norm = 2;
     const int exclude_center = 1;
     const double perr = 0.05;
@@ -182,23 +150,40 @@ int main ( int argc, char* argv[] ) {
     const index_t n = img->info.width;
     const index_t m = img->info.height;
     const index_t npatches = m * n;
-    quorum_map    = ( index_t* ) calloc ( npatches, sizeof( index_t ) );
-    quorum_freq   = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
-    quorum_freq_1 = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
+    //quorum_map    = ( index_t* ) calloc ( npatches, sizeof( index_t ) );
+    //quorum_freq   = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
+    //quorum_freq_1 = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
     //
-    // first pass: noisy sums
+    // first pass:  gather patch stats
     //
-    patch_sums ( img, img, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
+    patch_node_t* stats;
+    if ( cfg.stats_file ) {
+        //
+        // load patches stats from a file
+        //
+        printf ( "loading patch statistics from file....\n" );
+        stats = load_stats ( cfg.stats_file );
+        if ( !stats ) {
+            fprintf ( stderr, "could not load stats from %s.\n", cfg.stats_file );
+            free_patch_template ( tpl );
+            pixels_free ( img->pixels );
+            free ( img );
+            return RESULT_ERROR;
+        }
+    } else {
+        printf ( "gathering patch stats from image....\n" );
+        stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
+    }
+
+    apply_denoiser ( &out, img, perr, tpl, stats);
     //
-    // second pass: using denoised for contexts
+    // second pass: using denoised contexts
     //
-    patch_sums ( img, &out, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
+    //stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
+    //apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
 
     printf ( "saving result...\n" );
-    snprintf ( ofname, 128, "quo_%s", fname );
-    int res = write_pnm ( ofname, &out );
+    int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", ofname );
     }

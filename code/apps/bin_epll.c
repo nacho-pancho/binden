@@ -11,7 +11,7 @@
 #include "image.h"
 #include "templates.h"
 #include "patches.h"
-#include "patch_mapper.h"
+//#include "patch_mapper.h"
 #include "bitfun.h"
 #include "stats.h"
 

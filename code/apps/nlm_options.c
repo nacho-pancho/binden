@@ -85,6 +85,8 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
     case 'v':
         set_log_level ( LOG_DEBUG );
         break;
+    case 'i':
+        cfg->input_file = arg;
     case 'o':
         cfg->output_file = arg;
         break;
