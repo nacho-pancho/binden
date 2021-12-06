@@ -1,6 +1,5 @@
 #!/bin/sh
 mkdir -p build
-cd build
-cmake ../code
-make
+cmake -S code -B build
+make -C build
 

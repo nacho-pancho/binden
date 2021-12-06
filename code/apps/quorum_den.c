@@ -97,12 +97,12 @@ index_t apply_denoiser (
     for ( int r = 0 ; r < k ; ++r ) {
         quorum_prob[ r ] = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
     }
-    printf ( "estimating probabilities (Krichevskii-Trofimoff)....\n" );
+    //printf ( "estimating probabilities (Krichevskii-Trofimoff)....\n" );
     for ( int r = 0 ; r < k + 1 ; ++r ) {
         quorum_prob[ r ]   = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
         const double PS  = ( double ) quorum_freq[ r ]  / ( double ) total;
         const double PS1 = ( double ) quorum_freq_1[ r ] / ( double ) total;
-        printf ( "sum %3d P(S)=%8.6f P(1,S)=%8.6f P(1|S) %8.6f\n", r, PS, PS1, quorum_prob[ r ] );
+	//printf ( "sum %3d P(S)=%8.6f P(1,S)=%8.6f P(1|S) %8.6f\n", r, PS, PS1, quorum_prob[ r ] );
     }
 
     printf ( "denoising....\n" );
@@ -196,9 +196,9 @@ int main ( int argc, char* argv[] ) {
     patch_sums ( img, &out, tpl, quorum_map, quorum_freq, quorum_freq_1 );
     apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
 
-    printf ( "saving result...\n" );
-    snprintf ( ofname, 128, "quo_%s", fname );
-    int res = write_pnm ( ofname, &out );
+    printf ( "saving result to quorum.pnm ...\n" );
+    //snprintf ( ofname, 128, "quo_%s", fname );
+    int res = write_pnm ( "quorum.pnm", &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", ofname );
     }

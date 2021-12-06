@@ -174,7 +174,7 @@ int main ( int argc, char* argv[] ) {
     }
 
     printf ( "saving result...\n" );
-    snprintf ( ofname, 128, "nlm_%s", fname );
+    snprintf ( ofname, 128, "seminlm.pnm", fname );
     int res = write_pnm ( ofname, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", ofname );

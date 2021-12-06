@@ -114,7 +114,7 @@ int main ( int argc, char* argv[] ) {
     //
     //
     //
-    snprintf ( ofname, 128, "nlm_%s", fname );
+    snprintf ( ofname, 128, "nlm.pnm" );
     int res = write_pnm ( ofname, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", ofname );
