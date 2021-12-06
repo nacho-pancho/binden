@@ -7,7 +7,7 @@
 /**
  * Program options. These are filled in by the argument parser
  */
-typedef struct nlm_config {
+typedef struct config {
     const char * input_file;
     const char * output_file;
     const char * stats_file;
@@ -21,10 +21,12 @@ typedef struct nlm_config {
     int max_clusters;
     int max_dist;
     double perr;
+    double nlm_window_scale;
+    double nlm_weight_scale;
     int decay;
     denoiser_f denoiser;
-} nlm_config_t;
+} config_t;
 
-nlm_config_t parse_opt ( int argc, char* * argv );
+config_t parse_opt ( int argc, char* * argv );
 
 #endif

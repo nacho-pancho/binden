@@ -6,9 +6,10 @@ set(TARGETS
 	bin_nlm_tree
 	bin_epll
 	bin_dude
+	median
 )
 foreach (aux ${TARGETS})
- add_executable (${aux} ${aux}.c nlm_options.c)
+ add_executable (${aux} ${aux}.c config.c)
  if (WIN32)
    target_link_libraries(${aux} binden)
  else() # UNIX

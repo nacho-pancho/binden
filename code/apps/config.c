@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
-#include "nlm_options.h"
+#include "config.h"
 #include "logging.h"
 /**
  * These are the options that we can handle through the command line
@@ -21,6 +21,8 @@ static struct argp_option options[] = {
     {"perr",           'p', "probability", 0, "error probability", 0 },
     {"search",         'R', "radius",  0, "output file", 0 },
     {"decay",          'w', "rate",  0, "weight decay as function of distance", 0 },
+    {"nlmwin",         'h', "scale",  0, "non-local means window scale", 0 },
+    {"nlmwin",         'H', "scale",  0, "non-local means weight scale", 0 },
     {"stats",          'S', "stats",    0, "stats filename.", 0 },
     {"denoiser",       'D', "rule",    0, "denoising rule.", 0 },
     { 0 } // terminator
@@ -47,9 +49,9 @@ static char args_doc[] = "<INPUT_FILE>";
  */
 static struct argp argp = { options, _parse_opt, args_doc, program_doc, 0, 0, 0 };
 
-nlm_config_t parse_opt ( int argc, char* * argv ) {
+config_t parse_opt ( int argc, char* * argv ) {
 
-    nlm_config_t cfg;
+    config_t cfg;
     cfg.input_file  = NULL;
     cfg.output_file = "denoised.pnm";
     cfg.stats_file = NULL;
@@ -59,11 +61,13 @@ nlm_config_t parse_opt ( int argc, char* * argv ) {
     cfg.template_norm = 2;
     cfg.template_center = 0;  // exclude center
     cfg.template_scale  = 1;  // exclude center
-    cfg.search_radius = 40;
+    cfg.search_radius = 30;
     cfg.max_dist = 10;
     cfg.max_clusters = 10000;
     cfg.perr = 0.1;
     cfg.decay = 1;
+    cfg.nlm_weight_scale = 1.0;
+    cfg.nlm_window_scale = 2.0;
     cfg.denoiser = majority;
     argp_parse ( &argp, argc, argv, 0, 0, &cfg );
 
@@ -77,7 +81,7 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
     /* Get the input argument from argp_parse,
      * which we know is a pointer to our arguments structure.
      */
-    nlm_config_t * cfg = ( nlm_config_t* ) state->input;
+    config_t * cfg = ( config_t* ) state->input;
     switch ( key ) {
     case 'q':
         set_log_level ( LOG_ERROR );
@@ -119,6 +123,12 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'w':
         cfg->decay = atoi ( arg );
+        break;
+    case 'h':
+        cfg->nlm_window_scale = atof ( arg );
+        break;
+    case 'H':
+        cfg->nlm_weight_scale = atof ( arg );
         break;
     case 'R':
         cfg->search_radius = atoi ( arg );

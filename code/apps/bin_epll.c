@@ -15,10 +15,10 @@
 #include "bitfun.h"
 #include "stats.h"
 
-#include "nlm_options.h"
+#include "config.h"
 
 int main ( int argc, char* argv[] ) {
-    nlm_config_t cfg = parse_opt ( argc, argv );
+    config_t cfg = parse_opt ( argc, argv );
 
     image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {

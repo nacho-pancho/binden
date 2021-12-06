@@ -6,6 +6,7 @@
 #include "image.h"
 #include "templates.h"
 #include "patches.h"
+#include "config.h"
 
 float * create_gaussian_weights ( patch_template_t* tpl, const float sigma ) {
     const int k = tpl->k;
@@ -37,23 +38,27 @@ double patch_dist ( const patch_t* a, const patch_t* b, const float* weights ) {
 }
 
 int main ( int argc, char* argv[] ) {
-    char ofname[ 128 ];
-    if ( argc < 2 ) {
-        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
-        return RESULT_ERROR;
-    }
-    const char* fname = argv[ 1 ];
-    image_t* img = read_pnm ( fname );
+
+    config_t cfg = parse_opt ( argc, argv );
+
+    image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {
-        fprintf ( stderr, "error opening image %s.\n", fname );
+        fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
         return RESULT_ERROR;
     }
     if ( img->info.result != RESULT_OK ) {
-        fprintf ( stderr, "error reading image %s.\n", fname );
+        fprintf ( stderr, "error reading image %s.\n", cfg.input_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
     }
+    if ( img->info.maxval > 1 ) {
+        fprintf ( stderr, "only binary images supported.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
@@ -65,14 +70,13 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 3;
-    const int norm = 2;
     const int exclude_center = 0;
-    patch_template_t* tpl;
     patch_t* pat, * pot;
 
-    tpl = generate_ball_template ( radius, norm, exclude_center );
-    float sigma = radius;
+    patch_template_t* tpl;
+    tpl = read_template ( cfg.template_file );
+    float sigma = 2;
+
     float* weights = create_gaussian_weights ( tpl, sigma );
     pat = alloc_patch ( tpl->k );
     pot = alloc_patch ( tpl->k );
@@ -80,8 +84,8 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    const int R = 20;
-    const double h = 1.4;
+    const int R = cfg.search_radius;
+    const double h = cfg.nlm_window_scale;
     const double C = -0.5 / ( h * h );
     linear_template_t* ltpl = linearize_template ( tpl, m, n );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
@@ -114,10 +118,9 @@ int main ( int argc, char* argv[] ) {
     //
     //
     //
-    snprintf ( ofname, 128, "nlm.pnm" );
-    int res = write_pnm ( ofname, &out );
+    int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
-        fprintf ( stderr, "error writing image %s.\n", ofname );
+        fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
     free_patch ( pot );
     free_patch ( pat );

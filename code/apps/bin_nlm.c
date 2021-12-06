@@ -17,7 +17,7 @@
 #include "patches.h"
 #include "patch_mapper.h"
 #include "bitfun.h"
-#include "nlm_options.h"
+#include "config.h"
 
 /*---------------------------------------------------------------------------------------*/
 
@@ -95,7 +95,7 @@ int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl )
 /*---------------------------------------------------------------------------------------*/
 
 index_t apply_denoiser ( image_t* out, const image_t* img,
-                         const patch_template_t* tpl, nlm_config_t* cfg ) {
+                         const patch_template_t* tpl, config_t* cfg ) {
 
     const index_t R = cfg->search_radius;
     const index_t maxd = cfg->max_dist;
@@ -153,7 +153,7 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
 
 int main ( int argc, char* argv[] ) {
 
-    nlm_config_t cfg = parse_opt ( argc, argv );
+    config_t cfg = parse_opt ( argc, argv );
 
     image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {

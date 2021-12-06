@@ -17,12 +17,12 @@
 //#include "patch_mapper.h"
 #include "bitfun.h"
 #include "stats.h"
-#include "nlm_options.h"
+#include "config.h"
 
 /*---------------------------------------------------------------------------------------*/
 
 index_t apply_denoiser ( image_t* out, const image_t* img,
-                         const patch_template_t* tpl, patch_node_t* stats, nlm_config_t* cfg ) {
+                         const patch_template_t* tpl, patch_node_t* stats, config_t* cfg ) {
 
     const index_t maxd = cfg->max_dist;
     const double perr = cfg->perr;
@@ -71,7 +71,7 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
 
 int main ( int argc, char* argv[] ) {
 
-    nlm_config_t cfg = parse_opt ( argc, argv );
+    config_t cfg = parse_opt ( argc, argv );
 
     image_t* img = read_pnm ( cfg.input_file );
 

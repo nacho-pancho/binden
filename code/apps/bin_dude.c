@@ -17,7 +17,7 @@
 #include "patches.h"
 #include "stats.h"
 #include "bitfun.h"
-#include "nlm_options.h"
+#include "config.h"
 #include "templates.h"
 /**
  * pseudo-image where each pixel's value contains the sum
@@ -92,7 +92,7 @@ int main ( int argc, char* argv[] ) {
 
     char ofname[ 128 ];
     image_t out;
-    nlm_config_t cfg = parse_opt ( argc, argv );
+    config_t cfg = parse_opt ( argc, argv );
 
     image_t* img = read_pnm ( cfg.input_file );
 
