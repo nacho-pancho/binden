@@ -90,7 +90,6 @@ index_t apply_denoiser (
 
 int main ( int argc, char* argv[] ) {
 
-    char ofname[ 128 ];
     image_t out;
     config_t cfg = parse_opt ( argc, argv );
 
@@ -108,6 +107,20 @@ int main ( int argc, char* argv[] ) {
     }
     if ( img->info.maxval > 1 ) {
         fprintf ( stderr, "only binary images supported.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    patch_template_t* tpl;
+    if ( !cfg.template_file || !strlen(cfg.template_file)) {
+        fprintf ( stderr, "a template is required for this method.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    tpl = read_template ( cfg.template_file );
+    if (!tpl) {
+        fprintf ( stderr, "missing or invalid template file %s.\n",cfg.template_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
@@ -134,12 +147,7 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int exclude_center = 1;
     const double perr = cfg.perr;
-
-    patch_template_t* tpl;
-
-    tpl = read_template( cfg.template_file ); //generate_ball_template ( radius, norm, exclude_center );
     sort_template(tpl,1); 
     //
     // non-local means
@@ -184,7 +192,7 @@ int main ( int argc, char* argv[] ) {
     printf ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
-        fprintf ( stderr, "error writing image %s.\n", ofname );
+        fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 

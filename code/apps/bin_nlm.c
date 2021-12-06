@@ -172,6 +172,22 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
+    patch_template_t* tpl;
+    if ( !cfg.template_file || !strlen(cfg.template_file)) {
+        fprintf ( stderr, "a template is required for this method.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    tpl = read_template ( cfg.template_file );
+    if (!tpl) {
+        fprintf ( stderr, "missing or invalid template file %s.\n",cfg.template_file );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    sort_template ( tpl, 1 );
+    //dilate_template ( tpl, cfg.template_scale, 1 );
 
     image_t out;
     out.info = img->info;
@@ -182,10 +198,6 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    patch_template_t* tpl;
-    tpl = generate_ball_template ( cfg.template_radius, cfg.template_norm, cfg.template_center ? 0 : 1 );
-    sort_template ( tpl, 1 );
-    dilate_template ( tpl, cfg.template_scale, 1 );
 
     //
     // non-local means
