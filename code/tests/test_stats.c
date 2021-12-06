@@ -9,8 +9,8 @@
 
 int main ( int argc, char* argv[] ) {
 
-    if ( argc < 2 ) {
-        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
+    if ( argc < 3 ) {
+        fprintf ( stderr, "usage: %s <image> <template>.\n", argv[ 0 ] );
         return RESULT_ERROR;
     }
     const char* fname = argv[ 1 ];
@@ -31,12 +31,10 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 2;
-    const int norm = 1;
-    const int exclude_center = 1;
     patch_template_t* tpl;
-
-    tpl = generate_ball_template ( radius, norm, exclude_center );
+    
+    tpl = read_template( argv[2] ); 
+    //tpl = generate_ball_template ( radius, norm, exclude_center );
     //
     // coordinate access
     //
@@ -44,14 +42,19 @@ int main ( int argc, char* argv[] ) {
     printf ( "image alphabet size %d\n", img->info.maxval + 1 );
     stats_tree = gather_patch_stats ( img, img, tpl, NULL, NULL );
     printf ( "number of pixels %d\n", img->info.width * img->info.height );
+    printf("=================\n");
     print_stats_summary ( stats_tree, ">" );
+    print_patch_stats( stats_tree, tpl->k );
     save_stats ( "test.stats", stats_tree );
     patch_node_t* loaded_tree = NULL;
     loaded_tree = load_stats ( "test.stats" );
+    printf("=================\n");
     print_stats_summary ( loaded_tree, ">" );
+    print_patch_stats( stats_tree, tpl->k );
     save_stats ( "test2.stats", loaded_tree );
     // merge in place
     merge_stats ( loaded_tree, stats_tree, 1 );
+    printf("=================\n");
     print_stats_summary ( loaded_tree, ">" );
     patch_node_t* merged_tree = merge_stats ( loaded_tree, stats_tree, 0 ); // not in place
     //

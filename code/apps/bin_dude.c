@@ -134,14 +134,13 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 2;
-    const int norm = 2;
     const int exclude_center = 1;
-    const double perr = 0.05;
+    const double perr = cfg.perr;
 
     patch_template_t* tpl;
 
     tpl = read_template( cfg.template_file ); //generate_ball_template ( radius, norm, exclude_center );
+    sort_template(tpl,1); 
     //
     // non-local means
     // search a window of size R
