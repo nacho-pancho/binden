@@ -141,7 +141,7 @@ int main ( int argc, char* argv[] ) {
 
     patch_template_t* tpl;
 
-    tpl = generate_ball_template ( radius, norm, exclude_center );
+    tpl = read_template( cfg.template_file ); //generate_ball_template ( radius, norm, exclude_center );
     //
     // non-local means
     // search a window of size R

@@ -441,6 +441,10 @@ patch_node_t * get_patch_node ( patch_node_t * ptree, patch_t * pctx ) {
         pnode = pnode->children[ cj ];
         if ( pnode == NULL ) {
             fprintf ( stderr, "Error: patch node not found at depth=%d c[j]=%d\n", j, cj );
+            for ( int r = 0 ; r < k ; ++r ) {
+	        fprintf(stderr,"%c", cv[r] ? '1':'0');
+	    }
+	    fprintf(stderr,"\n");
             return NULL;
         }
     }
