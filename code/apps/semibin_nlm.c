@@ -15,6 +15,7 @@
 #include "patches.h"
 #include "patch_mapper.h"
 #include "bitfun.h"
+#include "config.h"
 
 pixel_t remove_mean ( patch_t* p ) {
     int mean = 0;
@@ -102,23 +103,41 @@ int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl )
 }
 
 int main ( int argc, char* argv[] ) {
-    char ofname[ 128 ];
-    if ( argc < 2 ) {
-        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
-        return RESULT_ERROR;
-    }
-    const char* fname = argv[ 1 ];
-    image_t* img = read_pnm ( fname );
+
+    config_t cfg = parse_opt ( argc, argv );
+
+    image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {
-        fprintf ( stderr, "error opening image %s.\n", fname );
+        fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
         return RESULT_ERROR;
     }
     if ( img->info.result != RESULT_OK ) {
-        fprintf ( stderr, "error reading image %s.\n", fname );
+        fprintf ( stderr, "error reading image %s.\n", cfg.input_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
     }
+    if ( img->info.maxval > 1 ) {
+        fprintf ( stderr, "only binary images supported.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    patch_template_t* tpl;
+    if ( !cfg.template_file || !strlen(cfg.template_file)) {
+        fprintf ( stderr, "a template is required for this method.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    tpl = read_template ( cfg.template_file );
+    if (!tpl) {
+        fprintf ( stderr, "missing or invalid template file %s.\n",cfg.template_file );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
@@ -128,15 +147,6 @@ int main ( int argc, char* argv[] ) {
     const int m = img->info.height;
     const int n = img->info.width;
     //
-    // create template
-    //
-    const int radius = 4;
-    const int norm = 2;
-    const int exclude_center = 0;
-    patch_template_t* tpl;
-
-    tpl = generate_ball_template ( radius, norm, exclude_center );
-    //
     // non-local means
     // search a window of size R
     //
@@ -144,9 +154,11 @@ int main ( int argc, char* argv[] ) {
     extract_patches ( img, tpl );
 
     printf ( "denoising....\n" );
-    const int R = 20;
-    const double h = argc < 3 ? 1.4 : atof ( argv[ 2 ] );
+    const int R = cfg.search_radius;
+    const double h = cfg.nlm_window_scale;
     const double C = -0.5 / ( h * h );
+    printf("NLM; R=%d h=%f C=%f\n",R, h, C);
+    
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             //const pixel_t z = get_linear_pixel ( img, li );
@@ -171,13 +183,13 @@ int main ( int argc, char* argv[] ) {
             const int x = ( int ) ( 0.5 + all_means[ li ] + y / norm );
             set_linear_pixel ( &out, li, x > 0 ? ( x < 255 ? x : 255 ) : 0 );
         }
+        printf("line %06d\n",i);
     }
 
-    printf ( "saving result...\n" );
-    snprintf ( ofname, 128, "seminlm.pnm", fname );
-    int res = write_pnm ( ofname, &out );
+    printf ( "saving result to %s...\n",cfg.output_file );
+    int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
-        fprintf ( stderr, "error writing image %s.\n", ofname );
+        fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 

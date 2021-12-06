@@ -29,7 +29,20 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
-
+    patch_template_t* tpl;
+    if ( !cfg.template_file || !strlen(cfg.template_file)) {
+        fprintf ( stderr, "a template is required for this method.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    tpl = read_template ( cfg.template_file );
+    if (!tpl) {
+        fprintf ( stderr, "missing or invalid template file %s.\n",cfg.template_file );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
     image_t out;
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
@@ -43,8 +56,6 @@ int main ( int argc, char* argv[] ) {
     //
     patch_t* pat, * pot;
 
-    patch_template_t* tpl;
-    tpl = read_template ( cfg.template_file );
 
     pat = alloc_patch ( tpl->k );
     pot = alloc_patch ( tpl->k );

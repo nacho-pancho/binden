@@ -75,18 +75,20 @@ int main ( int argc, char* argv[] ) {
 
     patch_template_t* tpl;
     tpl = read_template ( cfg.template_file );
-    float sigma = 2;
 
-    float* weights = create_gaussian_weights ( tpl, sigma );
     pat = alloc_patch ( tpl->k );
     pot = alloc_patch ( tpl->k );
     //
     // non-local means
     // search a window of size R
     //
+    const float sigma = cfg.nlm_window_scale;
     const int R = cfg.search_radius;
-    const double h = cfg.nlm_window_scale;
+    const double h = cfg.nlm_weight_scale;
     const double C = -0.5 / ( h * h );
+    float* weights = create_gaussian_weights ( tpl, sigma );
+    printf("NLM; R=%d h=%f C=%f\n",R, h,C);
+
     linear_template_t* ltpl = linearize_template ( tpl, m, n );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
@@ -109,11 +111,11 @@ int main ( int argc, char* argv[] ) {
                     count++;
                 }
             }
-
             const int x = ( int ) ( 0.5 + y / norm );
             set_linear_pixel ( &out, li, x );
             //set_linear_pixel(&out,li,count/100);
         }
+        printf("line %06d \n",i);
     }
     //
     //
