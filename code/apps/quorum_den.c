@@ -16,6 +16,7 @@
 #include "patches.h"
 //#include "patch_mapper.h"
 #include "bitfun.h"
+#include "config.h"
 
 /**
  * pseudo-image where each pixel's value contains the sum
@@ -132,27 +133,35 @@ index_t apply_denoiser (
 }
 
 int main ( int argc, char* argv[] ) {
-    char ofname[ 128 ];
-    if ( argc < 2 ) {
-        fprintf ( stderr, "usage: %s <image>.\n", argv[ 0 ] );
-        return RESULT_ERROR;
-    }
-    const char* fname = argv[ 1 ];
+    config_t cfg = parse_opt ( argc, argv );
 
-    image_t* img = read_pnm ( fname );
-
+    image_t* img = read_pnm ( cfg.input_file );
     if ( img == NULL ) {
-        fprintf ( stderr, "error opening image %s.\n", fname );
+        fprintf ( stderr, "error opening image %s.\n", cfg.input_file );
         return RESULT_ERROR;
     }
     if ( img->info.result != RESULT_OK ) {
-        fprintf ( stderr, "error reading image %s.\n", fname );
+        fprintf ( stderr, "error reading image %s.\n", cfg.input_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
     }
     if ( img->info.maxval > 1 ) {
         fprintf ( stderr, "only binary images supported.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    patch_template_t* tpl;
+    if ( !cfg.template_file || !strlen(cfg.template_file)) {
+        fprintf ( stderr, "a template is required for this method.\n" );
+        pixels_free ( img->pixels );
+        free ( img );
+        return RESULT_ERROR;
+    }
+    tpl = read_template ( cfg.template_file );
+    if (!tpl) {
+        fprintf ( stderr, "missing or invalid template file %s.\n",cfg.template_file );
         pixels_free ( img->pixels );
         free ( img );
         return RESULT_ERROR;
@@ -166,14 +175,6 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const int radius = 8;
-    const int norm = 2;
-    const int exclude_center = 1;
-    const double perr = 0.05;
-
-    patch_template_t* tpl;
-
-    tpl = generate_ball_template ( radius, norm, exclude_center );
     //
     // non-local means
     // search a window of size R
@@ -189,18 +190,17 @@ int main ( int argc, char* argv[] ) {
     // first pass: noisy sums
     //
     patch_sums ( img, img, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
+    apply_denoiser ( &out, img, cfg.perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
     //
     // second pass: using denoised for contexts
     //
     patch_sums ( img, &out, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
+    apply_denoiser ( &out, img, cfg.perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
 
-    printf ( "saving result to quorum.pnm ...\n" );
-    //snprintf ( ofname, 128, "quo_%s", fname );
-    int res = write_pnm ( "quorum.pnm", &out );
+    printf ( "saving result to %s ...\n",cfg.output_file );
+    int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
-        fprintf ( stderr, "error writing image %s.\n", ofname );
+        fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 

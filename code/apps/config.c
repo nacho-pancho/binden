@@ -61,7 +61,7 @@ config_t parse_opt ( int argc, char* * argv ) {
     cfg.template_norm = 2;
     cfg.template_center = 0;  // exclude center
     cfg.template_scale  = 1;  // exclude center
-    cfg.search_radius = 30;
+    cfg.search_radius = 10;
     cfg.max_dist = 10;
     cfg.max_clusters = 10000;
     cfg.perr = 0.1;
