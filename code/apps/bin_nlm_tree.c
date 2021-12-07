@@ -63,7 +63,7 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
                 changed++;
             }
         }
-        if ( ( i > 0 ) &&!( i % 100 ) ) {
+        if ( ( i > 0 ) &&!( i % 1000 ) ) {
             info ( "row %d changed %ld ( %7.4f%% )\n", i, changed, ( double ) changed * 100.0 / ( double ) li );
         }
     }

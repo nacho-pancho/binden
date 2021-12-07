@@ -78,19 +78,38 @@ int main ( int argc, char* argv[] ) {
     const index_t m = img1->info.height;
     const index_t npatches = m * n;
     //
-    // first pass:  gather patch stats
+    //
     //
     long a = 0;
+    long n1 = 0;
+    index_t n00 = 0, n01 = 0, n10 = 0, n11 = 0;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             const int x = get_linear_pixel(img1, li);
             const int y = get_linear_pixel(img2, li);
+            if (x == 0 ) {
+                if (y == 0) {
+                    n00 ++;
+                } else {
+                    n01 ++;
+                }
+            } else{
+                if (y == 0) {
+                    n10 ++;
+                } else {
+                    n11 ++;
+                }
+            }
+            n1 += x;
             const int d = x^y;
             set_linear_pixel ( &out, li, d );
             a += d;
         }
     }
-    printf("number of differences: %ld\n",a);
+    const double k = 100.0/(double)(m*n);
+    printf("ref.  0    %9lu (%5.2f%%) 1    %9lu (%5.2f%%) total %9lu\n", m*n-n1, (m*n-n1)*k, n1, n1*k,  m*n );
+    printf("equal 0->0 %9lu (%5.2f%%) 1->1 %9lu (%5.2f%%) total %9lu (%5.2f%%)\n", n00, n00*k, n11, n11*k, m*n-a, (m*n-a)*k );
+    printf("diff. 0->1 %9lu (%5.2f%%) 1->0 %9lu (%5.2f%%) total %9lu (%5.2f%%)\n", n01, n01*k, n10, n10*k, a, a*k );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
