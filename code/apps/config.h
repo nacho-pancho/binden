@@ -20,7 +20,8 @@ typedef struct config {
     int search_radius;
     int max_clusters;
     int max_dist;
-    double perr;
+    double p01;
+    double p10;
     double nlm_window_scale;
     double nlm_weight_scale;
     int decay;

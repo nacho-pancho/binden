@@ -4,7 +4,6 @@ set(TARGETS
 	semibin_nlm
 	bin_nlm
 	bin_nlm_tree
-	bin_epll
 	bin_dude
 	median
 )

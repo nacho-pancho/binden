@@ -10,29 +10,41 @@ stats="results/luisa.stats"
 #
 # vanilla DUDE
 #
+echo -e "\n\n=======================================\n"
 echo "ADD NOISE"
 cp ${clean} results/
-build/tools/add_noise --p01=${perr} --seed=42 --output=${input} ${clean}
+build/tools/add_noise --perr=${perr} --seed=42 --output=${input} ${clean}
 
+echo -e "\n\n=======================================\n"
 echo "MEDIAN"
 output=results/${image}_median_${template}_p${perr}.pnm
-build/apps/median --template=tpl/${template}.tpl --stats=${stats} --output=${output} ${input}
+time build/apps/median --template=tpl/${template}.tpl --stats=${stats} --output=${output} ${input}
 build/tools/compare --output=results/${image}_median_${template}_p${perr}_dif.pnm ${clean} ${output}
 
+echo -e "\n\n=======================================\n"
 echo "VANILLA DUDE"
 output=results/${image}_dude_${template}_p${perr}.pnm
-build/apps/bin_dude --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
+time build/apps/bin_dude --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
 build/tools/compare --output=results/${image}_dude_${template}_p${perr}_dif.pnm ${clean} ${output}
 
+echo -e "\n\n=======================================\n"
 echo "QUORUM DUDE"
 output=results/${image}_quorum_${template}_p${perr}.pnm
-build/apps/quorum_den --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
+time build/apps/quorum_den --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
 build/tools/compare --output=results/${image}_quorum_${template}_p${perr}_dif.pnm ${clean} ${output}
 
+echo -e "\n\n=======================================\n"
 echo "BINARY NLM"
 output=results/${image}_binnlm_${template}_p${perr}.pnm
-build/apps/bin_nlm --template=tpl/${template}.tpl --output=${output}  ${input}
+time build/apps/bin_nlm --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
 build/tools/compare --output=results/${image}_binnlm_${template}_p${perr}_dif.pnm ${clean} ${output}
+
+echo -e "\n\n=======================================\n"
+echo "BINARY NLM (TREE)"
+output=results/${image}_treenlm_${template}_p${perr}.pnm
+time build/apps/bin_nlm_tree --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
+build/tools/compare --output=results/${image}_treenlm_${template}_p${perr}_dif.pnm ${clean} ${output}
+echo -e "\n\n=======================================\n"
 
 #echo "SEMI-BIN NLM"
 #output=results/${image}_semibin_${template}_p${perr}.pnm

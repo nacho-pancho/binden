@@ -81,14 +81,16 @@ static index_t patch_sums ( const image_t* img, const image_t* ctximg, const pat
 
 static index_t apply_denoiser (
     image_t* out, const image_t* in,
-    const double perr,
     const index_t k,
     const index_t* quorum_map,
     const index_t* quorum_freq,
-    const index_t* quorum_freq_1 ) {
+    const index_t* quorum_freq_1,
+    const config_t* cfg ) {
 
-    const double p0 = perr;
-    const double p1 = 1.0 - perr;
+    const double p01 = cfg->p01;
+    const double p10 = cfg->p10;
+    const double pe = p01 + p10;
+    const double pc = 1.0 - pe;
 
     const int m = in->info.height;
     const int n = in->info.width;
@@ -98,15 +100,15 @@ static index_t apply_denoiser (
     for ( int r = 0 ; r < k ; ++r ) {
         quorum_prob[ r ] = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
     }
-    //printf ( "estimating probabilities (Krichevskii-Trofimoff)....\n" );
+    //info ( "estimating probabilities (Krichevskii-Trofimoff)....\n" );
     for ( int r = 0 ; r < k + 1 ; ++r ) {
         quorum_prob[ r ]   = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
         const double PS  = ( double ) quorum_freq[ r ]  / ( double ) total;
         const double PS1 = ( double ) quorum_freq_1[ r ] / ( double ) total;
-	//printf ( "sum %3d P(S)=%8.6f P(1,S)=%8.6f P(1|S) %8.6f\n", r, PS, PS1, quorum_prob[ r ] );
+	//info ( "sum %3d P(S)=%8.6f P(1,S)=%8.6f P(1|S) %8.6f\n", r, PS, PS1, quorum_prob[ r ] );
     }
 
-    printf ( "denoising....\n" );
+    info ( "denoising....\n" );
     index_t changed = 0;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
@@ -116,18 +118,19 @@ static index_t apply_denoiser (
             const pixel_t z = get_linear_pixel ( in, li );
             const int S = quorum_map[ li ];
             const double q = quorum_prob[ S ];
-            if ( z && ( q < p0 ) ) {
-                //printf("%d %d S=%d q=%8.6f: 1 -> 0\n",i,j,S,q);
+            // TODO: fix for non-symmetric!!
+            if ( z && ( q < pe ) ) {
+                //info("%d %d S=%d q=%8.6f: 1 -> 0\n",i,j,S,q);
                 changed++;
                 set_linear_pixel ( out, li, 0 );
-            } else if ( ( !z ) && ( q > p1 ) ) {
+            } else if ( ( !z ) && ( q > pc ) ) {
                 set_linear_pixel ( out, li, 1 );
-                //printf("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
+                //info("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
                 changed++;
             }
         }
     }
-    printf ( "Changed %ld pixels\n", changed );
+    info ( "Changed %ld pixels\n", changed );
     free ( quorum_prob );
     return changed;
 }
@@ -179,7 +182,7 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    printf ( "computing sums....\n" );
+    info ( "computing sums....\n" );
     const index_t n = img->info.width;
     const index_t m = img->info.height;
     const index_t npatches = m * n;
@@ -190,21 +193,21 @@ int main ( int argc, char* argv[] ) {
     // first pass: noisy sums
     //
     patch_sums ( img, img, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, cfg.perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
+    apply_denoiser ( &out, img, tpl->k, quorum_map, quorum_freq, quorum_freq_1, &cfg );
     //
     // second pass: using denoised for contexts
     //
     patch_sums ( img, &out, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, cfg.perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
+    apply_denoiser ( &out, img, tpl->k, quorum_map, quorum_freq, quorum_freq_1, &cfg );
 
-    printf ( "saving result to %s ...\n",cfg.output_file );
+    info ( "saving result to %s ...\n",cfg.output_file );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 
-    printf ( "finishing...\n" );
+    info ( "finishing...\n" );
     free ( quorum_prob );
     free ( quorum_freq_1 );
     free ( quorum_freq );

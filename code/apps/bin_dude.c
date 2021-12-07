@@ -19,6 +19,8 @@
 #include "bitfun.h"
 #include "config.h"
 #include "templates.h"
+#include "logging.h"
+
 /**
  * pseudo-image where each pixel's value contains the sum
  * of its patch samples
@@ -47,18 +49,20 @@ static double* quorum_prob;
 
 static index_t apply_denoiser (
     image_t* out, const image_t* in,
-    const double perr,
     const patch_template_t* tpl,
-    patch_node_t* stats) {
+    patch_node_t* stats,
+    config_t* cfg) {
 
-    const double p0 = perr;
-    const double p1 = 1.0 - perr;
+    const double p01 = cfg->p01;
+    const double p10 = cfg->p10;
+    const double pe = p01 + p10;
+    const double pc = 1.0 - pe;
 
     const int m = in->info.height;
     const int n = in->info.width;
     const index_t total = m * n;
 
-    printf ( "denoising....\n" );
+    info ( "denoising....\n" );
     index_t changed = 0;
     const index_t k = tpl->k;
     patch_t* Pij = alloc_patch ( k );
@@ -71,19 +75,20 @@ static index_t apply_denoiser (
             const pixel_t z = get_linear_pixel ( in, li );
             const patch_node_t* patch_stats  = get_patch_node( stats, Pij );
             const double q = (0.5 + (double)patch_stats->counts) / (1.0 + (double) patch_stats->occu); 
-            if ( z && ( q < p0 ) ) {
-                //printf("%d %d S=%d q=%8.6f: 1 -> 0\n",i,j,S,q);
+            // TODO: fix this for non-symmetric case!!
+            if ( z && ( q < pe ) ) {
+                //info("%d %d S=%d q=%8.6f: 1 -> 0\n",i,j,S,q);
                 changed++;
                 set_linear_pixel ( out, li, 0 );
-            } else if ( ( !z ) && ( q > p1 ) ) {
+            } else if ( ( !z ) && ( q > pc ) ) {
                 set_linear_pixel ( out, li, 1 );
-                //printf("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
+                //info("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
                 changed++;
             }
         }
     }
     free_patch ( Pij );
-    printf ( "Changed %ld pixels\n", changed );
+    info ( "Changed %ld pixels\n", changed );
     free ( quorum_prob );
     return changed;
 }
@@ -147,19 +152,15 @@ int main ( int argc, char* argv[] ) {
     //
     // create template
     //
-    const double perr = cfg.perr;
     sort_template(tpl,1); 
     //
     // non-local means
     // search a window of size R
     //
-    printf ( "computing sums....\n" );
+    info ( "computing sums....\n" );
     const index_t n = img->info.width;
     const index_t m = img->info.height;
     const index_t npatches = m * n;
-    //quorum_map    = ( index_t* ) calloc ( npatches, sizeof( index_t ) );
-    //quorum_freq   = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
-    //quorum_freq_1 = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
     //
     // first pass:  gather patch stats
     //
@@ -168,7 +169,7 @@ int main ( int argc, char* argv[] ) {
         //
         // load patches stats from a file
         //
-        printf ( "loading patch statistics from file....\n" );
+        info ( "loading patch statistics from file....\n" );
         stats = load_stats ( cfg.stats_file );
         if ( !stats ) {
             fprintf ( stderr, "could not load stats from %s.\n", cfg.stats_file );
@@ -178,25 +179,25 @@ int main ( int argc, char* argv[] ) {
             return RESULT_ERROR;
         }
     } else {
-        printf ( "gathering patch stats from image....\n" );
+        info ( "gathering patch stats from image....\n" );
         stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
     }
 
-    apply_denoiser ( &out, img, perr, tpl, stats);
+    apply_denoiser ( &out, img, tpl, stats, &cfg);
     //
     // second pass: using denoised contexts
     //
     //stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
     //apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
 
-    printf ( "saving result...\n" );
+    info ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 
-    printf ( "finishing...\n" );
+    info ( "finishing...\n" );
     free ( quorum_prob );
     free ( quorum_freq_1 );
     free ( quorum_freq );

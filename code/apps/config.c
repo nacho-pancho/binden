@@ -18,11 +18,13 @@ static struct argp_option options[] = {
     {"tcenter",        'c', "bool",    0, "include center in template.", 0 },
     {"maxdist",        'd', "integer", 0, "maximum patch distance", 0 },
     {"maxclusters",    'C', "number",  0, "maximum number of clusters", 0 },
-    {"perr",           'p', "probability", 0, "error probability", 0 },
+    {"perr",           'p', "probability", 0, "symmetric error probability", 0 },
+    {"pzero",          '0', "probability", 0, "P(0->1)", 0 },
+    {"pone",           '1', "probability", 0, "P(1->0)", 0 },
     {"search",         'R', "radius",  0, "output file", 0 },
     {"decay",          'w', "rate",  0, "weight decay as function of distance", 0 },
     {"nlmwin",         'h', "scale",  0, "non-local means window scale", 0 },
-    {"nlmwin",         'H', "scale",  0, "non-local means weight scale", 0 },
+    {"nlmweight",      'H', "scale",  0, "non-local means weight scale", 0 },
     {"stats",          'S', "stats",    0, "stats filename.", 0 },
     {"denoiser",       'D', "rule",    0, "denoising rule.", 0 },
     { 0 } // terminator
@@ -64,7 +66,8 @@ config_t parse_opt ( int argc, char* * argv ) {
     cfg.search_radius = 10;
     cfg.max_dist = 10;
     cfg.max_clusters = 10000;
-    cfg.perr = 0.1;
+    cfg.p01 = 0.025;
+    cfg.p10 = 0.025;
     cfg.decay = 1;
     cfg.nlm_weight_scale = 1.0;
     cfg.nlm_window_scale = 2.0;
@@ -83,6 +86,7 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
     /* Get the input argument from argp_parse,
      * which we know is a pointer to our arguments structure.
      */
+    set_log_level(LOG_INFO);
     config_t * cfg = ( config_t* ) state->input;
     switch ( key ) {
     case 'q':
@@ -122,7 +126,14 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         cfg->max_dist = atoi ( arg );
         break;
     case 'p':
-        cfg->perr = atof ( arg );
+        cfg->p01 = atof ( arg ) / 2;
+        cfg->p10 = cfg->p01;
+        break;
+    case '0':
+        cfg->p01 = atof ( arg );
+        break;
+    case '1':
+        cfg->p10 = atof ( arg );
         break;
     case 'w':
         cfg->decay = atoi ( arg );

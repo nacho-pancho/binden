@@ -16,6 +16,7 @@
 #include "patch_mapper.h"
 #include "bitfun.h"
 #include "config.h"
+#include "logging.h"
 
 pixel_t remove_mean ( patch_t* p ) {
     int mean = 0;
@@ -39,7 +40,7 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
     const index_t npatches = m * n;
     const size_t ki = tpl->k;
     const size_t ko = compute_binary_mapping_samples ( ki );
-    printf ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
+    info ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
     all_patches = ( upixel_t* ) malloc ( ko * npatches * sizeof( upixel_t ) );
     all_means   = ( upixel_t* ) malloc ( npatches * sizeof( upixel_t ) );
     patch_t* p = alloc_patch ( ki );
@@ -59,11 +60,11 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
             // copy raw bytes: this bypasses sign, which is good for us
             memcpy ( all_patches + li * ko, q->values, ko * sizeof( upixel_t ) );
 #ifdef INSANE_DEBUG
-            printf ( "i %d j %d patch:", i, j );
+            info ( "i %d j %d patch:", i, j );
             for ( int kk = 0 ; kk < ko ; kk++ ) {
-                printf ( "%x ", *( all_patches + li * ko + kk ) );
+                info ( "%x ", *( all_patches + li * ko + kk ) );
             }
-            printf ( "\n" );
+            info ( "\n" );
 #endif
         }
     }
@@ -83,16 +84,16 @@ int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl )
     const upixel_t* samplesi = &all_patches[ nsamples * i ];
     const upixel_t* samplesj = &all_patches[ nsamples * j ];
 #ifdef INSANE_DEBUG
-    printf ( "dist: patch %d:", i );
+    info ( "dist: patch %d:", i );
     for ( int kk = 0 ; kk < nsamples ; kk++ ) {
-        printf ( "%x ", samplesi[ kk ] );
+        info ( "%x ", samplesi[ kk ] );
     }
-    printf ( "\n" );
-    printf ( "dist: patch %d:", j );
+    info ( "\n" );
+    info ( "dist: patch %d:", j );
     for ( int kk = 0 ; kk < nsamples ; kk++ ) {
-        printf ( "%x ", samplesj[ kk ] );
+        info ( "%x ", samplesj[ kk ] );
     }
-    printf ( "\n" );
+    info ( "\n" );
 #endif
     int d = 0;
     for ( index_t k = 0 ; k < nsamples ; ++k ) {
@@ -150,14 +151,14 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    printf ( "extracting patches....\n" );
+    info ( "extracting patches....\n" );
     extract_patches ( img, tpl );
 
-    printf ( "denoising....\n" );
+    info ( "denoising....\n" );
     const int R = cfg.search_radius;
     const double h = cfg.nlm_window_scale;
     const double C = -0.5 / ( h * h );
-    printf("NLM; R=%d h=%f C=%f\n",R, h, C);
+    info("NLM; R=%d h=%f C=%f\n",R, h, C);
     
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
@@ -174,7 +175,7 @@ int main ( int argc, char* argv[] ) {
                     const int d = patch_dist ( li, lj, tpl );
                     const double w = exp ( C * d );
 #ifdef INSANE_DEBUG
-                    printf ( "d %d w %f\n", d, w );
+                    info ( "d %d w %f\n", d, w );
 #endif
                     y += w * ( get_pixel ( img, di, dj ) - all_means[ lj ] );
                     norm += w;
@@ -183,17 +184,17 @@ int main ( int argc, char* argv[] ) {
             const int x = ( int ) ( 0.5 + all_means[ li ] + y / norm );
             set_linear_pixel ( &out, li, x > 0 ? ( x < 255 ? x : 255 ) : 0 );
         }
-        printf("line %06d\n",i);
+        info("line %06d\n",i);
     }
 
-    printf ( "saving result to %s...\n",cfg.output_file );
+    info ( "saving result to %s...\n",cfg.output_file );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 
-    printf ( "finishing...\n" );
+    info ( "finishing...\n" );
     free ( all_patches );
     free ( all_means );
     free_patch_template ( tpl );

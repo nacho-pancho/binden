@@ -75,14 +75,12 @@ int main ( int argc, char* argv[] ) {
     //stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
     //apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
 
-    printf ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 
-    printf ( "finishing...\n" );
     pixels_free ( img->pixels );
     pixels_free ( out.pixels );
     free ( img );
@@ -98,8 +96,9 @@ static struct argp_option options[] = {
     {"verbose",        'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output", 0 },
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output", 0 },
     {"output",         'o', "file",    0, "output file", 0 },
-    {"p01",            'p', "probability", 0, "error probability 0->1 (defaults to 0.1)", 0 },
-    {"p10",            'r', "probability", 0, "error probability 1->0 (defaults to 0->1)", 0 },
+    {"perr",           'p', "probability", 0, "symmetric error probability", 0 },
+    {"pzero",          '0', "probability", 0, "error probability 0->1", 0 },
+    {"pone",           '1', "probability", 0, "error probability 1->0", 0 },
     {"seed",           's', "seed",    0, "random seed.", 0 },
     { 0 } // terminator
 };
@@ -160,7 +159,14 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         cfg->seed = atoi ( arg );
         break;
     case 'p':
+        cfg->p01 = atof ( arg ) / 2;
+        cfg->p10 = cfg->p01;
+        break;
+    case '0':
         cfg->p01 = atof ( arg );
+        break;
+    case '1':
+        cfg->p10 = atof ( arg );
         break;
     case 'r':
         cfg->p10 = atof ( arg );

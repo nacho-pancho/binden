@@ -32,7 +32,7 @@ static upixel_t * extract_patches ( const image_t* img, const patch_template_t* 
     const index_t npatches = m * n;
     const size_t ki = tpl->k;
     const size_t ko = compute_binary_mapping_samples ( ki );
-    printf ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
+    info ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
     all_patches = ( upixel_t* ) malloc ( ko * npatches * sizeof( upixel_t ) );
     patch_t* p = alloc_patch ( ki );
     patch_t* q = alloc_patch ( ko );
@@ -47,11 +47,11 @@ static upixel_t * extract_patches ( const image_t* img, const patch_template_t* 
             // copy raw bytes: this bypasses sign, which is good for us
             memcpy ( all_patches + li * ko, q->values, ko * sizeof( upixel_t ) );
 #ifdef INSANE_DEBUG
-            printf ( "i %d j %d patch:", i, j );
+            info ( "i %d j %d patch:", i, j );
             for ( int kk = 0 ; kk < ko ; kk++ ) {
-                printf ( "%x ", *( all_patches + li * ko + kk ) );
+                info ( "%x ", *( all_patches + li * ko + kk ) );
             }
-            printf ( "\n" );
+            info ( "\n" );
 #endif
         }
     }
@@ -72,7 +72,7 @@ static float * create_gaussian_weights ( const patch_template_t* tpl, const floa
         weights[ r ] = w;
         n += w;
     }
-    // normalize  so that sum is 1
+    // normalize  so that sum is not 1 but a large integer number
     for ( int r = 0 ; r < k ; ++r ) {
         weights[ r ] /= n;
     }
@@ -91,16 +91,16 @@ static int patch_dist ( const index_t i, const index_t j, const patch_template_t
     const upixel_t* samplesi = &all_patches[ nsamples * i ];
     const upixel_t* samplesj = &all_patches[ nsamples * j ];
 #ifdef INSANE_DEBUG
-    printf ( "dist: patch %d:", i );
+    info ( "dist: patch %d:", i );
     for ( int kk = 0 ; kk < nsamples ; kk++ ) {
-        printf ( "%x ", samplesi[ kk ] );
+        info ( "%x ", samplesi[ kk ] );
     }
-    printf ( "\n" );
-    printf ( "dist: patch %d:", j );
+    info ( "\n" );
+    info ( "dist: patch %d:", j );
     for ( int kk = 0 ; kk < nsamples ; kk++ ) {
-        printf ( "%x ", samplesj[ kk ] );
+        info ( "%x ", samplesj[ kk ] );
     }
-    printf ( "\n" );
+    info ( "\n" );
 #endif
     int d = 0;
     for ( index_t k = 0 ; k < nsamples ; ++k ) {
@@ -116,23 +116,28 @@ static index_t apply_denoiser ( image_t* out, const image_t* img,
                          const patch_template_t* tpl, config_t* cfg ) {
 
     const index_t R = cfg->search_radius;
-    const index_t maxd = cfg->max_dist;
-    const double perr = cfg->perr;
+    const double p01 = cfg->p01;
+    const double p10 = cfg->p10;
+    const double pe = p01 + p10;
+    const double pc = 1.0 - pe;
 
+    const index_t maxd = (int)((double)tpl->k * pe * 2.0 + 0.5);
     const double h = cfg->nlm_weight_scale;
     const double C = -0.5 / ( h * h );
     float* w = create_gaussian_weights ( tpl, h );
+    info("NLM h=%f C=%f p01=%f p10=%f R=%ld maxd=%d\n",h,C,p01,p10,R, maxd);
 
     //index_t w[ maxd ];
     //for ( index_t d = 0 ; d < maxd ; ++d ) {
     //    w[ d ] = 1024 / ( ( d >> cfg->decay ) + 1 );
-    //    printf ( "dist %ld weight %ld\n", d, w[ d ] );
+    //    info ( "dist %ld weight %ld\n", d, w[ d ] );
     //}
 
     const int m = img->info.height;
     const int n = img->info.width;
     index_t oned = 0;
     index_t zeroed = 0;
+
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             double y = 0.0;
@@ -155,7 +160,7 @@ static index_t apply_denoiser ( image_t* out, const image_t* img,
                 }
             }
             const pixel_t z = get_linear_pixel ( img, li );
-            const pixel_t x = cfg->denoiser ( z, y, norm, perr );
+            const pixel_t x = cfg->denoiser ( z, y, norm, p01, p10 );
             if ( z != x ) {
                 set_linear_pixel ( out, li, x );
                 if ( x )
@@ -165,7 +170,7 @@ static index_t apply_denoiser ( image_t* out, const image_t* img,
             }
         }
         if ( cfg->verbose && !( i % 500 ) ) {
-            printf ( "| %6d | 1->0 %8ld | 0->1 %8ld |\n", i, zeroed, oned );
+            info ( "| %6d | 1->0 %8ld | 0->1 %8ld |\n", i, zeroed, oned );
         }
     }
     free(w);
@@ -226,23 +231,23 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    printf ( "extracting patches....\n" );
+    info ( "extracting patches....\n" );
     extract_patches ( img, tpl );
 
-    printf ( "denoising / first pass....\n" );
+    info ( "denoising / first pass....\n" );
     apply_denoiser ( &out, img, tpl, &cfg );
-
-    printf ( "denoising / second pass....\n" );
+#if 0
+    info ( "denoising / second pass....\n" );
     extract_patches ( &out, tpl );
     apply_denoiser ( &out, img, tpl, &cfg );
-
-    printf ( "saving result...\n" );
+#endif
+    info ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
-    printf ( "finishing...\n" );
+    info ( "finishing...\n" );
     free ( all_patches );
     free_patch_template ( tpl );
     pixels_free ( img->pixels );

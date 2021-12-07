@@ -84,10 +84,10 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    printf ( "extracting patches....\n" );
+    info ( "extracting patches....\n" );
     patch_node_t* stats = gather_patch_stats ( img, img, template, NULL, NULL );
 
-    printf ( "denoising....\n" );
+    info ( "denoising....\n" );
 
     patch_t* Pij = alloc_patch ( template->k );
     index_t changed = 0;
@@ -120,11 +120,11 @@ int main ( int argc, char* argv[] ) {
             }
         }
         if ( ( i > 0 ) &&!( i % 100 ) ) {
-            printf ( "row %d changed %ld\n", i, changed );
+            info ( "row %d changed %ld\n", i, changed );
         }
     }
 
-    printf ( "saving result to %s...\n", cfg.output_file );
+    info ( "saving result to %s...\n", cfg.output_file );
     // OVERRIDE since writing raw binary type is broken
     out.info.type = 1;
     out.info.encoding = PNM_ASCII;
@@ -134,7 +134,7 @@ int main ( int argc, char* argv[] ) {
     }
 
 
-    printf ( "finishing...\n" );
+    info ( "finishing...\n" );
     free_node ( stats );
     free_node ( model );
     free_patch_template ( template );

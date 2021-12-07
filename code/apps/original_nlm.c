@@ -97,7 +97,7 @@ int main ( int argc, char* argv[] ) {
     const double h = cfg.nlm_weight_scale;
     const double C = -0.5 / ( h * h );
     float* weights = create_gaussian_weights ( tpl, sigma );
-    printf("NLM; R=%d h=%f C=%f\n",R, h,C);
+    info("NLM; R=%d h=%f C=%f\n",R, h,C);
 
     linear_template_t* ltpl = linearize_template ( tpl, m, n );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
@@ -110,7 +110,7 @@ int main ( int argc, char* argv[] ) {
             int di1 = i < ( m - R ) ? i + R : m;
             int dj0 = j > R     ? j - R : 0;
             int dj1 = j < ( n - R ) ? j + R : n;
-            //printf("di0 %d di1 %d dj0 %d dj1 %d\n",di0,di1,dj0,dj1);
+            //info("di0 %d di1 %d dj0 %d dj1 %d\n",di0,di1,dj0,dj1);
             for ( int di = di0 ; di < di1 ; ++di ) {
                 for ( int dj = dj0 ; dj < dj1 ; ++dj ) {
                     get_linear_patch ( img, ltpl, di, dj, pot );

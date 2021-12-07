@@ -97,7 +97,6 @@ int main ( int argc, char* argv[] ) {
     }
 
 
-    printf ( "finishing...\n" );
     pixels_free ( img1->pixels );
     free ( img1 );
     pixels_free ( img2->pixels );
