@@ -3,6 +3,7 @@ set(TOOLS
 	analyze_stats
 	print_template
 	create_template
+	add_noise
 )
 foreach (aux ${TOOLS})
  add_executable (${aux} ${aux}.c)

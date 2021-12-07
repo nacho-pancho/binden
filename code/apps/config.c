@@ -69,6 +69,7 @@ config_t parse_opt ( int argc, char* * argv ) {
     cfg.nlm_weight_scale = 1.0;
     cfg.nlm_window_scale = 2.0;
     cfg.denoiser = majority;
+    cfg.seed = 42;
     argp_parse ( &argp, argc, argv, 0, 0, &cfg );
 
     return cfg;
@@ -135,6 +136,9 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'T':
         cfg->template_file = arg;
+        break;
+    case 'Q':
+        cfg->seed = atoi(arg);
         break;
     case 'D':
         if ( !strcasecmp ( arg, "majority" ) ||

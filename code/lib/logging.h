@@ -15,8 +15,8 @@
  * \file log.h
  * \brief Bare bones logger
  */
-#ifndef LOG_H
-#define LOG_H
+#ifndef LOGGING_H
+#define LOGGING_H
 #include <stdarg.h>
 #include <stdio.h>
 
