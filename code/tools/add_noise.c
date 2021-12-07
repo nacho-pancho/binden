@@ -17,7 +17,8 @@
 typedef struct config {
     const char * input_file;
     const char * output_file;
-    double perr;
+    double p01;
+    double p10;
     int seed;
 } config_t;
 
@@ -53,15 +54,18 @@ int main ( int argc, char* argv[] ) {
     const index_t m = img->info.height;
     const index_t npatches = m * n;
     //
-    // first pass:  gather patch stats
+    // if only p01 is specified (p10=-1), the noise is assumed symmetric and split even between p01 and p10
     //
-    const double p = cfg.perr;
-    fprintf ( stdout, "adding noise with p=%8.6f and seed=%d.\n", p, cfg.seed );
+    const double p01 = cfg.p10 > 0 ? cfg.p01 : cfg.p01/2.0;
+    const double p10 = cfg.p10 > 0 ? cfg.p10 : p01;
+
+    fprintf ( stdout, "adding noise with p01=%6.4f p10=%6.4f and seed=%d.\n", p01, p10, cfg.seed );
     srand48(cfg.seed);
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             const int x = get_linear_pixel(img, li);
-            set_linear_pixel ( &out, li, drand48() < p ? 1-x: x );
+            const double coin = drand48();
+            set_linear_pixel ( &out, li, coin < p01 ? 1-x: coin > (1.0-p10) ? 1-x : x );
         }
     }
 
@@ -93,9 +97,9 @@ int main ( int argc, char* argv[] ) {
 static struct argp_option options[] = {
     {"verbose",        'v', 0, OPTION_ARG_OPTIONAL, "Produce verbose output", 0 },
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output", 0 },
-    {"input",          'i', "file",    0, "input file", 0 },
     {"output",         'o', "file",    0, "output file", 0 },
-    {"perr",           'p', "probability", 0, "error probability", 0 },
+    {"p01",            'p', "probability", 0, "error probability 0->1 (defaults to 0.1)", 0 },
+    {"p10",            'r', "probability", 0, "error probability 1->0 (defaults to 0->1)", 0 },
     {"seed",           's', "seed",    0, "random seed.", 0 },
     { 0 } // terminator
 };
@@ -126,7 +130,8 @@ config_t parse_opt ( int argc, char* * argv ) {
     config_t cfg;
     cfg.input_file  = NULL;
     cfg.output_file = "denoised.pnm";
-    cfg.perr = 0.1;
+    cfg.p01 = 0.1;
+    cfg.p10 = -1.0; // if left unspecified, p10 = p01
     cfg.seed = 42;
     argp_parse ( &argp, argc, argv, 0, 0, &cfg );
 
@@ -148,8 +153,6 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
     case 'v':
         set_log_level ( LOG_DEBUG );
         break;
-    case 'i':
-        cfg->input_file = arg;
     case 'o':
         cfg->output_file = arg;
         break;
@@ -157,7 +160,10 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         cfg->seed = atoi ( arg );
         break;
     case 'p':
-        cfg->perr = atof ( arg );
+        cfg->p01 = atof ( arg );
+        break;
+    case 'r':
+        cfg->p10 = atof ( arg );
         break;
 
     case ARGP_KEY_ARG:

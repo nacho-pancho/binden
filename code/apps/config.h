@@ -25,6 +25,7 @@ typedef struct config {
     double nlm_weight_scale;
     int decay;
     int seed;
+    int verbose;
     denoiser_f denoiser;
 } config_t;
 

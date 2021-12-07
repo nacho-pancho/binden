@@ -9,7 +9,7 @@
 #include "patches.h"
 #include "config.h"
 
-float * create_gaussian_weights ( patch_template_t* tpl, const float sigma ) {
+static float * create_gaussian_weights ( patch_template_t* tpl, const float sigma ) {
     const int k = tpl->k;
     float* weights = ( float* ) malloc ( k * sizeof( float ) );
     float n = 0.0f;
@@ -27,7 +27,7 @@ float * create_gaussian_weights ( patch_template_t* tpl, const float sigma ) {
     return weights;
 }
 
-double patch_dist ( const patch_t* a, const patch_t* b, const float* weights ) {
+static double patch_dist ( const patch_t* a, const patch_t* b, const float* weights ) {
     const int k = a->k;
     double dist = 0;
     const pixel_t* pa = a->values;
@@ -125,7 +125,6 @@ int main ( int argc, char* argv[] ) {
             set_linear_pixel ( &out, li, x );
             //set_linear_pixel(&out,li,count/100);
         }
-        printf("line %06d \n",i);
     }
     //
     //

@@ -70,6 +70,7 @@ config_t parse_opt ( int argc, char* * argv ) {
     cfg.nlm_window_scale = 2.0;
     cfg.denoiser = majority;
     cfg.seed = 42;
+    cfg.verbose = 0;
     argp_parse ( &argp, argc, argv, 0, 0, &cfg );
 
     return cfg;
@@ -89,6 +90,7 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'v':
         set_log_level ( LOG_DEBUG );
+        cfg->verbose = 1;
         break;
     case 'i':
         cfg->input_file = arg;

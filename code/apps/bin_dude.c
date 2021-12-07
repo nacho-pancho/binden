@@ -30,22 +30,22 @@ index_t* quorum_map;
  * frequency of each quorum value (size k + 1)
  * P(Q=q)
  */
-index_t* quorum_freq;
+static index_t* quorum_freq;
 
 /**
  * frequency of each quorum value given that the center is 1
  * each quorum value. (size k + 1)
  */
-index_t* quorum_freq_1;
+static index_t* quorum_freq_1;
 
 /**
  * frequency of each quorum value given that the center is 1
  * each quorum value. (size k + 1)
  */
-double* quorum_prob;
+static double* quorum_prob;
 
 
-index_t apply_denoiser (
+static index_t apply_denoiser (
     image_t* out, const image_t* in,
     const double perr,
     const patch_template_t* tpl,

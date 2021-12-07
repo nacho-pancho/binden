@@ -23,27 +23,27 @@
  * of its patch samples
  * size (m x n)
  */
-index_t* quorum_map;
+static index_t* quorum_map;
 
 /**
  * frequency of each quorum value (size k + 1)
  * P(Q=q)
  */
-index_t* quorum_freq;
+static index_t* quorum_freq;
 
 /**
  * frequency of each quorum value given that the center is 1
  * each quorum value. (size k + 1)
  */
-index_t* quorum_freq_1;
+static index_t* quorum_freq_1;
 
 /**
  * frequency of each quorum value given that the center is 1
  * each quorum value. (size k + 1)
  */
-double* quorum_prob;
+static double* quorum_prob;
 
-index_t patch_sums ( const image_t* img, const image_t* ctximg, const patch_template_t* tpl,
+static index_t patch_sums ( const image_t* img, const image_t* ctximg, const patch_template_t* tpl,
                      index_t* quorum_map, index_t* quorum_freq, index_t* quorum_freq_1 ) {
     //
     // determine total number of patches in image
@@ -79,7 +79,7 @@ index_t patch_sums ( const image_t* img, const image_t* ctximg, const patch_temp
     return total;
 }
 
-index_t apply_denoiser (
+static index_t apply_denoiser (
     image_t* out, const image_t* in,
     const double perr,
     const index_t k,

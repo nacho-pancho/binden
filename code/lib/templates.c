@@ -159,7 +159,7 @@ patch_template_t * read_one_template ( FILE* fh ) {
         fprintf ( stderr, "Invalid template file (reading header) \n" );
         return NULL;
     }
-    printf ( "template has %d positions.", k );
+    //printf ( "template has %d positions.", k );
     if ( k <= 0 ) {
         fprintf ( stderr, "Invalid template file (invalid size)\n" );
         return NULL;

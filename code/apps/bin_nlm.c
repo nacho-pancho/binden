@@ -21,9 +21,9 @@
 
 /*---------------------------------------------------------------------------------------*/
 
-upixel_t* all_patches;
+static upixel_t* all_patches;
 
-upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
+static upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
     //
     // determine total number of patches in image
     //
@@ -61,6 +61,24 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
     return all_patches;
 }
 
+static float * create_gaussian_weights ( const patch_template_t* tpl, const float sigma ) {
+    const int k = tpl->k;
+    float* weights = ( float* ) malloc ( k * sizeof( float ) );
+    float n = 0.0f;
+    for ( int r = 0 ; r < k ; ++r ) {
+        const float i = fabs ( ( double ) tpl->coords[ r ].i );
+        const float j = fabs ( ( double ) tpl->coords[ r ].j );
+        const float w = exp ( -0.5 * ( i * i + j * j ) / ( sigma * sigma ) );
+        weights[ r ] = w;
+        n += w;
+    }
+    // normalize  so that sum is 1
+    for ( int r = 0 ; r < k ; ++r ) {
+        weights[ r ] /= n;
+    }
+    return weights;
+}
+
 /*---------------------------------------------------------------------------------------*/
 
 /**
@@ -68,7 +86,7 @@ upixel_t * extract_patches ( const image_t* img, const patch_template_t* tpl ) {
  * bits between their binary representations.
  * we must handle raw bytes and conver them to the appropriate sizes
  */
-int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl ) {
+static int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl ) {
     const index_t nsamples = compute_binary_mapping_samples ( tpl->k );
     const upixel_t* samplesi = &all_patches[ nsamples * i ];
     const upixel_t* samplesj = &all_patches[ nsamples * j ];
@@ -94,18 +112,22 @@ int patch_dist ( const index_t i, const index_t j, const patch_template_t* tpl )
 
 /*---------------------------------------------------------------------------------------*/
 
-index_t apply_denoiser ( image_t* out, const image_t* img,
+static index_t apply_denoiser ( image_t* out, const image_t* img,
                          const patch_template_t* tpl, config_t* cfg ) {
 
     const index_t R = cfg->search_radius;
     const index_t maxd = cfg->max_dist;
     const double perr = cfg->perr;
 
-    index_t w[ maxd ];
-    for ( index_t d = 0 ; d < maxd ; ++d ) {
-        w[ d ] = 1024 / ( ( d >> cfg->decay ) + 1 );
-        printf ( "dist %ld weight %ld\n", d, w[ d ] );
-    }
+    const double h = cfg->nlm_weight_scale;
+    const double C = -0.5 / ( h * h );
+    float* w = create_gaussian_weights ( tpl, h );
+
+    //index_t w[ maxd ];
+    //for ( index_t d = 0 ; d < maxd ; ++d ) {
+    //    w[ d ] = 1024 / ( ( d >> cfg->decay ) + 1 );
+    //    printf ( "dist %ld weight %ld\n", d, w[ d ] );
+    //}
 
     const int m = img->info.height;
     const int n = img->info.width;
@@ -113,8 +135,8 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
     index_t zeroed = 0;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
-            index_t y = 0;
-            index_t norm = 0;
+            double y = 0.0;
+            double norm = 0.0;
             int di0 = i > R     ? i - R : 0;
             int di1 = i < ( m - R ) ? i + R : m;
             int dj0 = j > R     ? j - R : 0;
@@ -142,10 +164,11 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
                     zeroed++;
             }
         }
-        if ( !( i % 50 ) ) {
+        if ( cfg->verbose && !( i % 500 ) ) {
             printf ( "| %6d | 1->0 %8ld | 0->1 %8ld |\n", i, zeroed, oned );
         }
     }
+    free(w);
     return zeroed + oned;
 }
 

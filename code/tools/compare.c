@@ -27,52 +27,70 @@ config_t parse_opt ( int argc, char* * argv );
 int main ( int argc, char* argv[] ) {
 
     image_t out;
+    image_t *img1, *img2;
     config_t cfg = parse_opt ( argc, argv );
 
-    image_t* img = read_pnm ( cfg.input_file_1 );
-
-    if ( img == NULL ) {
+    img1 = read_pnm ( cfg.input_file_1 );
+    if ( img1 == NULL ) {
         fprintf ( stderr, "error opening image %s.\n", cfg.input_file_1 );
         return RESULT_ERROR;
     }
-    if ( img->info.result != RESULT_OK ) {
+    if ( img1->info.result != RESULT_OK ) {
         fprintf ( stderr, "error reading image %s.\n", cfg.input_file_1 );
-        pixels_free ( img->pixels );
-        free ( img );
+        pixels_free ( img1->pixels );
+        free ( img1 );
         return RESULT_ERROR;
     }
-    if ( img->info.maxval > 1 ) {
+    if ( img1->info.maxval > 1 ) {
         fprintf ( stderr, "only binary images supported.\n" );
-        pixels_free ( img->pixels );
-        free ( img );
+        pixels_free ( img1->pixels );
+        free ( img1 );
         return RESULT_ERROR;
     }
 
-    out.info = img->info;
-    out.pixels = pixels_copy ( &img->info, img->pixels );
-    const index_t n = img->info.width;
-    const index_t m = img->info.height;
+    img2 = read_pnm ( cfg.input_file_2 );
+    if ( img2 == NULL ) {
+        fprintf ( stderr, "error opening image %s.\n", cfg.input_file_2 );
+        return RESULT_ERROR;
+    }
+    if ( img2->info.result != RESULT_OK ) {
+        fprintf ( stderr, "error reading image %s.\n", cfg.input_file_2 );
+        pixels_free ( img1->pixels );
+        free ( img1 );
+        pixels_free ( img2->pixels );
+        free ( img2 );
+        return RESULT_ERROR;
+    }
+    if ( img2->info.maxval > 1 ) {
+        fprintf ( stderr, "only binary images supported.\n" );
+        pixels_free ( img1->pixels );
+        free ( img1 );
+        pixels_free ( img2->pixels );
+        free ( img2 );
+        return RESULT_ERROR;
+    }
+
+    out.info = img1->info;
+    out.pixels = pixels_copy ( &img1->info, img1->pixels );
+
+
+    const index_t n = img1->info.width;
+    const index_t m = img1->info.height;
     const index_t npatches = m * n;
     //
     // first pass:  gather patch stats
     //
-    const double p = cfg.perr;
-    fprintf ( stdout, "adding noise with p=%8.6f and seed=%d.\n", p, cfg.seed );
-    srand48(cfg.seed);
+    long a = 0;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
-            const int x = get_linear_pixel(img, li);
-            set_linear_pixel ( &out, li, drand48() < p ? 1-x: x );
+            const int x = get_linear_pixel(img1, li);
+            const int y = get_linear_pixel(img2, li);
+            const int d = x^y;
+            set_linear_pixel ( &out, li, d );
+            a += d;
         }
     }
-
-    //
-    // second pass: using denoised contexts
-    //
-    //stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
-    //apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
-
-    printf ( "saving result...\n" );
+    printf("number of differences: %ld\n",a);
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
@@ -80,9 +98,11 @@ int main ( int argc, char* argv[] ) {
 
 
     printf ( "finishing...\n" );
-    pixels_free ( img->pixels );
+    pixels_free ( img1->pixels );
+    free ( img1 );
+    pixels_free ( img2->pixels );
+    free ( img2 );
     pixels_free ( out.pixels );
-    free ( img );
     return res;
 }
 
@@ -107,12 +127,12 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state );
  * General description of what this program does; appears when calling with --help
  */
 static char program_doc[] =
-    "\n*** add noise to  images    ***\n";
+    "\n*** compare binary images    ***\n";
 
 /**
  * A general description of the input arguments we accept; appears when calling with --help
  */
-static char args_doc[] = "<INPUT_FILE>";
+static char args_doc[] = "<IMAGE_FILE_1> <IMAGE_FILE_2>";
 
 /**
  * argp configuration structure
@@ -147,12 +167,6 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'o':
         cfg->output_file = arg;
-        break;
-    case 's':
-        cfg->seed = atoi ( arg );
-        break;
-    case 'p':
-        cfg->perr = atof ( arg );
         break;
 
     case ARGP_KEY_ARG:
