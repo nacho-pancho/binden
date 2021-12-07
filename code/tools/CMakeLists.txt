@@ -4,6 +4,7 @@ set(TOOLS
 	print_template
 	create_template
 	add_noise
+	compare
 )
 foreach (aux ${TOOLS})
  add_executable (${aux} ${aux}.c)
