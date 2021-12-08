@@ -14,9 +14,9 @@
 #include "image.h"
 #include "templates.h"
 #include "patches.h"
-//#include "patch_mapper.h"
 #include "bitfun.h"
 #include "config.h"
+#include "logging.h"
 
 /**
  * pseudo-image where each pixel's value contains the sum

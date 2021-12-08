@@ -794,3 +794,25 @@ patch_node_t * cluster_stats (
     free_node ( work );
     return clusters;
 }
+
+/*---------------------------------------------------------------------------------------*/
+/* recursive implementation */
+patch_node_t * prune_stats ( patch_node_t* base, prune_decision_f prune_decision, void* prune_par, const int in_place ) {
+    if (base->leaf) return base;
+    patch_node_t* first = base->children[0], *second = base->children[1];
+    if (first) {
+        first = prune_stats(first, prune_decision, prune_par, 1);
+    }
+    if (second) {
+        second = prune_stats(second, prune_decision, prune_par, 1);
+    }
+    if (first && first->leaf && second && second->leaf) {
+        if (prune_decision(base,first,second,prune_par)) {
+            free_node(first);
+            free_node(second);
+            base->children[0] = base->children[1] = NULL;
+            base->leaf = 1;
+        }        
+    }
+    return base;
+}

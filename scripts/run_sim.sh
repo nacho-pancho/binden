@@ -28,7 +28,7 @@ do
       echo -e "\n\n=========================================================================\n"
       echo "MEDIAN"
       output=${outdir}/${image}_p${perr}_median_${template}.pnm
-      dif=${outdir}/${image}_median_${template}_p${perr}_dif.pnm
+      dif=${outdir}/${image}_p${perr}_median_${template}_dif.pnm
       time build/apps/median --template=tpl/${template}.tpl --stats=${stats} --output=${output} ${input}
       echo -e "\n-----------------------------------------\n"
       build/tools/compare --output=${dif} ${clean} ${output}
@@ -36,14 +36,14 @@ do
       echo -e "\n\n=========================================================================\n"
       echo "VANILLA DUDE"
       output=${outdir}/${image}_p${perr}_dude_${template}.pnm
-      dif=${outdir}/${image}_dude_${template}_p${perr}_dif.pnm
+      dif=${outdir}/${image}_p${perr}_dude_${template}_dif.pnm
       time build/apps/bin_dude --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
       build/tools/compare --output=${dif} ${clean} ${output}
 
       echo -e "\n\n=========================================================================\n"
       echo "QUORUM DUDE"
       output=${outdir}/${image}_p${perr}_quorum_${template}.pnm
-      dif=${outdir}/${image}_quorum_${template}_p${perr}_dif.pnm
+      dif=${outdir}/${image}_p${perr}_quorum_${template}_dif.pnm
       time build/apps/quorum_den --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
       echo -e "\n-----------------------------------------\n"
       build/tools/compare --output=${dif} ${clean} ${output}
@@ -51,7 +51,7 @@ do
       echo -e "\n\n=========================================================================\n"
       echo "BINARY NLM"
       output=${outdir}/${image}_p${perr}_binnlm_${template}.pnm
-      dif=${outdir}/${image}_binnlm_${template}_p${perr}_dif.pnm
+      dif=${outdir}/${image}_p${perr}_binnlm_${template}_dif.pnm
       time build/apps/bin_nlm --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
       echo -e "\n-----------------------------------------\n"
       build/tools/compare --output=${dif} ${clean} ${output}
@@ -59,7 +59,7 @@ do
       echo -e "\n\n=========================================================================\n"
       echo "BINARY NLM (TREE)"
       output=${outdir}/${image}_p${perr}_treenlm_${template}.pnm
-      dif=${outdir}/${image}_treenlm_${template}_p${perr}_dif.pnm
+      dif=${outdir}/${image}_p${perr}_treenlm_${template}_dif.pnm
       time build/apps/bin_nlm_tree --template=tpl/${template}.tpl --output=${output} --perr=0.1 ${input}
       echo -e "\n-----------------------------------------\n"
       build/tools/compare --output=${dif} ${clean} ${output}

@@ -127,6 +127,14 @@ patch_node_t * merge_stats ( patch_node_t* dest, const patch_node_t * src, const
 
 /*---------------------------------------------------------------------------------------*/
 
+/** strategy for pruning a node */
+typedef int (*prune_decision_f)(const patch_node_t *base, const patch_node_t* left, const patch_node_t* right, void* par);
+
+/** prune a stats tree using some strategy */
+patch_node_t * prune_stats ( patch_node_t* dest, prune_decision_f prune_decision, void* prune_par, const int in_place );
+
+/*---------------------------------------------------------------------------------------*/
+
 void free_stats ( patch_node_t * pnode );
 
 /*---------------------------------------------------------------------------------------*/

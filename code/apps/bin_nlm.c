@@ -18,6 +18,7 @@
 #include "patch_mapper.h"
 #include "bitfun.h"
 #include "config.h"
+#include "logging.h"
 
 /*---------------------------------------------------------------------------------------*/
 

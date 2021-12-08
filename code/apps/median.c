@@ -8,6 +8,7 @@
 #include "templates.h"
 #include "patches.h"
 #include "config.h"
+#include "logging.h"
 
 int main ( int argc, char* argv[] ) {
 

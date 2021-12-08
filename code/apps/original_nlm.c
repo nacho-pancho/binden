@@ -8,6 +8,7 @@
 #include "templates.h"
 #include "patches.h"
 #include "config.h"
+#include "logging.h"
 
 static float * create_gaussian_weights ( patch_template_t* tpl, const float sigma ) {
     const int k = tpl->k;
