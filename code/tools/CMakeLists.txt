@@ -4,6 +4,7 @@ set(TOOLS
 	print_template
 	create_template
 	add_noise
+	estimate_noise
 	compare
 )
 foreach (aux ${TOOLS})

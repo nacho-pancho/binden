@@ -1,14 +1,283 @@
-\documentclass{report}
+\documentclass{article}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb,amsfonts}
 \def\opt{\ensuremath{^{*}}}
 \def\loss{\ell}
 \def\expect{\ensuremath{\mathbb{E}}}
-\title{Cuentas DUDE Poisson-Exp}
+\title{Cuentas}
 \author{Ignacio Ramirez}
 \date{\today}
 \begin{document}
 \maketitle
+\def\t{^{T}}
+\def\inv{^{-1}}
+\def\hx{\hat{x}}
+
+\section{DUDE para canal binario asimétrico}
+
+Sean $n$, $n_1$ y $n_0=n-n_1$ la cantidad total de ocurrencias del contexto actual en la señal, la cantidad de $1$s y la cantidad de $0$s respectivamente,  $z$ el valor observado y $\hx$ la decisión del denoiser.  La regla de denoising general está dada por:
+$$\hx = \arg\min_x\; (n_0\;n_1)\Pi\inv(\pi_z \odot \lambda_x)$$
+donde $\Pi$ es la matriz de transición del canal, $\Lambda$ es la matriz de costos $\lambda_{ij}=\ell(\hx=j|x=i)$ ($x$ es el valor limpio desconocido), $\lambda_i$ es la $i$-ésima columna de $\Lambda$ y $\pi_j$ es la $j$-ésima columna de $\Pi$.
+
+En el caso en cuestión, dados los parámetros del canal $p_0=P(Z=1|X=0)$ y $p_1=P(Z=0|X=1)$, tenemos
+\[
+\Pi=\left(
+\begin{array}{cc}
+1-p_0 & p_0 \\
+p_1   & 1-p_1 
+\end{array}
+\right)
+\]
+Consideremos por ahora la función de costo más básica (Hamming):
+\[
+\Lambda=\left(
+\begin{array}{cc}
+0 & 1 \\
+1   & 0 
+\end{array}
+\right).
+\]
+Empezamos por invertir $\Pi$:
+\[
+\Pi\inv=\frac{1}{a}\left(
+\begin{array}{cc}
+1-p_1 & -p_0 \\
+-p_1   & 1-p_0 
+\end{array}
+\right)
+\]
+con $a=(1-p_0)(1-p_1)-p_0p_1$. Ahora tenemos que derivar la regla para $z=0$ y $z=1$ respectivamente.
+\paragraph{Caso z=0.} Si la decisión $\hx=0$ tenemos: 
+\[
+\pi_0 \odot \lambda_0=\left[
+\begin{array}{c}
+1-p_0 \\
+p_1   
+\end{array}
+\right] \odot
+\left[
+\begin{array}{c}
+0 \\
+1   
+\end{array}
+\right] = \left[
+\begin{array}{c}
+0 \\
+p_1   
+\end{array}
+\right] 
+\Rightarrow 
+\Pi\inv(\pi_0 \odot \lambda_0) = \frac{1}{a}
+\left[
+\begin{array}{c}
+-p_0p_1 \\
+(1-p_0)p_1 
+\end{array}
+\right]
+\]
+
+y si $\hx=1$ tenemos:
+\[
+\pi_0 \odot \lambda_1=\left[
+\begin{array}{c}
+1-p_0 \\
+p_1   
+\end{array}
+\right] \odot
+\left[
+\begin{array}{c}
+1 \\
+0   
+\end{array}
+\right] = \left[
+\begin{array}{c}
+1-p_0 \\
+0   
+\end{array}
+\right]
+\Rightarrow
+\Pi\inv(\pi_0 \odot \lambda_1) = \frac{1}{a}
+\left[
+\begin{array}{c}
+(1-p_1)(1-p_0) \\
+-p_1(1-p_0)
+\end{array}
+\right]
+\]
+Para obtener la decisión, falta multiplicar por las cuentas de unos y ceros $(n_0\;n_1)$ (podemos descartar $1/a$ ya que aparece en ambos elementos de la minimización):
+\[
+\hx = \arg\min \left\{
+-p_0p_1n_0 + (1-p_0)p_1n_1\;,\;(1-p_1)(1-p_0)n_0 - p_1(1-p_0)n_1
+\right\}.
+\]
+En otras palabras, se decide $\hx=0$ si
+$$
+%-p_0p_1n_0 + (1-p_0)p_1n_1\;\leq\;(1-p_1)(1-p_0)n_0 - p_1(1-p_0)n_1,
+$$
+sino se decide $\hx=1$. Nos interesa expresar esto en términos de $n_0$,
+$$
+-p_0p_1n_0 + (1-p_0)p_1(n-n_0)\;\leq\;(1-p_1)(1-p_0)n_0 - p_1(1-p_0)(n-n_0),
+$$
+despejando:
+$$
+(1-p_0)p_1n + p_1(1-p_0)n > (p_0p_1 + (1-p_0)p_1 + (1-p_1)(1-p_0) + p_1(1-p_0))n_0
+$$
+simplificando:
+$$
+2p_1(1-p_0)n \leq (p_1 + 1-p_0)n_0
+$$
+o sea que si observamos $z=1$, decidimos dejarlo como está ($\hx=0$) si:
+$$\frac{n_0}{n} \geq \frac{2p_1(1-p_0)}{1 + p_1 - p_0}$$
+´
+\paragraph{Caso z=1}
+Recordemos:
+\[
+\Pi=\left(
+\begin{array}{cc}
+1-p_0 & p_0 \\
+p_1   & 1-p_1 
+\end{array}
+\right),
+\quad
+\Lambda=\left(
+\begin{array}{cc}
+0 & 1 \\
+1   & 0 
+\end{array}
+\right),
+\quad
+\Pi\inv=\frac{1}{a}\left(
+\begin{array}{cc}
+1-p_1 & -p_0 \\
+-p_1   & 1-p_0 
+\end{array}
+\right).
+\]
+Para $\hx=0$ tenemos: 
+\[
+\pi_1 \odot \lambda_0=\left[
+\begin{array}{c}
+p_0 \\
+1-p_1   
+\end{array}
+\right] \odot
+\left[
+\begin{array}{c}
+0 \\
+1   
+\end{array}
+\right] = \left[
+\begin{array}{c}
+0 \\
+1-p_1   
+\end{array}
+\right] 
+\Rightarrow 
+\Pi\inv(\pi_1 \odot \lambda_0) = \frac{1}{a}
+\left[
+\begin{array}{c}
+-p_0(1-p_1) \\
+(1-p_0)(1-p_1) 
+\end{array}
+\right]
+\]
+y para $\hx=1$ tenemos:
+\[
+\pi_1 \odot \lambda_1=\left[
+\begin{array}{c}
+p_0 \\
+1-p_1   
+\end{array}
+\right] \odot
+\left[
+\begin{array}{c}
+1 \\
+0   
+\end{array}
+\right] = \left[
+\begin{array}{c}
+p_0 \\
+0   
+\end{array}
+\right]
+\Rightarrow
+\Pi\inv(\pi_1 \odot \lambda_1) = \frac{1}{a}
+\left[
+\begin{array}{c}
+(1-p_1)p_0 \\
+-p_1p_0
+\end{array}
+\right].
+\]
+Multiplicando por $(n_0\;n_1)$ tenemos:
+\[
+\hx = \arg\min \left\{
+-p_0(1-p_1)n_0 + (1-p_0)(1-p_1)n_1
+\;,\;
+(1-p_1)p_0n_0 - p_1p_0n_1
+\right\}.
+\]
+Para que $\hx=1$ (el mismo valor observado en $z$) se debe cumplir:
+$$
+\hx=1 \Rightarrow -p_0(1-p_1)n_0 + (1-p_0)(1-p_1)n_1
+\geq
+(1-p_1)p_0n_0 - p_1p_0n_1.
+$$
+Reemplazando $n_0=n-n_1$:
+$$
+\hx=1 \Rightarrow -p_0(1-p_1)(n-n_1) + (1-p_0)(1-p_1)n_1
+\geq
+(1-p_1)p_0(n-n_1) - p_1p_0n_1.
+$$
+Despejando:
+$$
+p_0(1-p_1)n_1 + (1-p_0)(1-p_1)n_1 + (1-p_1)p_0n_1 + p_0p_1n_1 
+< 
+p_0(1-p_1)n + (1-p_1)p_0n 
+$$
+$$
+[1-p_1+p_0]n_1 \geq [2(1-p_1)p_0]n
+$$
+y finalmente:
+$$
+\hx=1 \Rightarrow (1 + p_0-p_1)n_1 \geq 2p_0(1-p_1)n.
+$$
+de nuevo se verifica que coincide con la regla del BSC ($p_0=p_1$).
+
+
+
+\paragraph{Resumiendo}
+Si $z=0$:
+$$\hx=0 \Rightarrow \frac{n_0}{n} \geq \frac{2p_1(1-p_0)}{1 + p_1 - p_0}$$
+Si $z=1$:
+$$
+\hx=1 \Rightarrow \frac{n_1}{n} \geq \frac{2p_0(1-p_1)}{1 + p_0-p_1}
+$$
+como era de esperar, se observa una clara simetria en ambas decisiones.
+
+
+
+\section{Estimacion del ruido}
+
+Este es un tema que suele ignorarse pero que es crucial, sobre todo para los métodos tipo DUDE, que son muy frágiles frente a la especificación incorrecta del canal.
+\def\vx{\ensuremath{\mathbf{x}}}
+
+La pregunta es: dada una imagen binaria $\vx$, y suponinendo que es afectada por un BAC de parámetros $p_0$ y $p_1$ desconocidos, cuáles son los valores de esos parámetros?
+
+La forma más común de responder esta pregunta, al menos en imágenes continuas, es buscar zonas (patches) de varianza mínima y atribuir eso al ruido. Claro que esa estimación va a estar sesgada hacia abajo si se toma el valor mínimo observado, ya que la varianza empírica $\hat\sigma^2$ tiene una probabilidad no nula de ser menor que la verdadera, $\sigma^2$. Lo que se puede hacer estimar ese valor para muchas zonas, calcular la distribución de $\hat\sigma^2$ y resolver $\sigma^2$ usando MLE.
+
+En el caso del BAC podemos hacer algo similar: asumimos que en la imagen limpia hay zonas totalmente blancas y totalmente negras (algo que, en documentos, es mucho muy probable).
+Entonces buscamos zonas mayormente blancas y zonas mayormente negras para estimar, respectivamente, $p_0$ y $p_1$. En el primer caso, podemos asumir que los pixeles negros son debidos a $p_0$, y en el segundo, que los blancos son debidos a $p_1$.
+
+En un esquema similar al DUDE, tomamos un template que defina un contexto, excluyendo el centro, y contamos la ocurrencia del valo central para los contextos blancos y negros. Claro que esto puede estar sesgado, sobre todo si el ruido es muy alto y la probabilidad de que los contextos sean totalmente blancos o negros es muy baja. Entonces lo que debemos hacer es buscar distintos valores de $p_1$ ($p_0$) y ponderar la contribución de distintos contextos según su peso.
+
+Concretamente, dado $p_1$, esperamos que la probabilidad de que un contexto blanco de tamaño $k$, al ser observado tenga peso $S=s$ sea:
+$$P(s|p_1)=p_1^s(1-p_1)^{k-s}.$$
+Dado $s$, la estimación que tenemos de $p_1$ es simplemente $q_1(s)=n_1(s)/n(s)$.
+La idea es combinar las $q_1(s)$ ponderadas por $P(s|p_1)$:
+$$P(p_1) = \sum_{s=0}^{k}P(s|p_1)q_1$$
+
+\section{DUDE Para Poisson-Exp}
 
 Formula de dude para $\ell_2$. 
 

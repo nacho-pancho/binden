@@ -46,18 +46,56 @@ static index_t* quorum_freq_1;
  */
 static double* quorum_prob;
 
-
+/**
+ * @brief DUDE denoiser for binary asymmetric channel
+ * 
+ * given p0 = P(0->1) and p1 = P(1->0)
+ *  the counts of 0s,n0,  1s, n1, and the total occurrences of the context, n
+ * the rule is given by:
+ * 
+ * if z = 0:
+ * x = 0 if n_0/n >= 2p1(1-p0)/(1+p1-p0)
+ * x = 1 otherwise
+ * 
+ * if z = 1:
+ * x = 1 if n_1/n >= 2p0(1-p1)/(1+p0-p1)
+ * x = 0 otherwise
+ * 
+ * @param out denoised image
+ * @param in noisy image
+ * @param tpl template to define context
+ * @param stats context statistics
+ * @param cfg program configuration
+ * @return index_t number of changed pixels
+ */
 static index_t apply_denoiser (
     image_t* out, const image_t* in,
     const patch_template_t* tpl,
     patch_node_t* stats,
     config_t* cfg) {
 
-    const double p01 = cfg->p01;
-    const double p10 = cfg->p10;
-    const double pe = p01 + p10;
+    const double p0 = cfg->p01;
+    const double p1 = cfg->p10;
+    const double pe = p0 + p1;
     const double pc = 1.0 - pe;
-
+    /*
+    * we define the thresholds:
+    *  t0 = 2p1(1-p0)/(1+p1-p0)
+    *  t1 = 2p0(1-p1)/(1+p0-p1)
+    * so that
+    * 
+    * if z = 0:
+    * x = 0 if n_0/n >= t0
+    * x = 1 otherwise
+    * 
+    * if z = 1:
+    * x = 1 if n_1/n >= t1
+    * x = 0 otherwise
+    * 
+    */  
+    const double t0 = 2.0*p1*(1.0-p0) / ( 1.0+p1-p0);
+    const double t1 = 2.0*p0*(1.0-p1) / ( 1.0+p0-p1);
+    printf("DUDE: p0=%f p1=%f t0=%f t1=%f\n",p0,p1,t0,t1);
     const int m = in->info.height;
     const int n = in->info.width;
     const index_t total = m * n;
@@ -74,16 +112,21 @@ static index_t apply_denoiser (
             get_patch ( in, tpl, i, j, Pij );
             const pixel_t z = get_linear_pixel ( in, li );
             const patch_node_t* patch_stats  = get_patch_node( stats, Pij );
-            const double q = (0.5 + (double)patch_stats->counts) / (1.0 + (double) patch_stats->occu); 
-            // TODO: fix this for non-symmetric case!!
-            if ( z && ( q < pe ) ) {
-                //info("%d %d S=%d q=%8.6f: 1 -> 0\n",i,j,S,q);
-                changed++;
-                set_linear_pixel ( out, li, 0 );
-            } else if ( ( !z ) && ( q > pc ) ) {
-                set_linear_pixel ( out, li, 1 );
-                //info("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
-                changed++;
+            if ( !z ) { // z = 0
+                //const double q0 = (0.5 + (double)(patch_stats->occu-patch_stats->counts)) / (1.0 + (double) patch_stats->occu); 
+                const double n0 = (double)(patch_stats->occu-patch_stats->counts);
+                if (n0 < (t0 * (double)patch_stats->occu)) {
+                    changed++;
+                    set_linear_pixel ( out, li, 1 );
+                }
+            } else { // z = 1
+                //const double q1 = (0.5 + (double) patch_stats->counts) / (1.0 + (double) patch_stats->occu); 
+                const double n1 = (double)patch_stats->counts;
+                if (n1 < (t1 * (double)patch_stats->occu)) {
+                    set_linear_pixel ( out, li, 0 );
+                    //info("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
+                    changed++;
+                }
             }
         }
     }
@@ -92,6 +135,7 @@ static index_t apply_denoiser (
     free ( quorum_prob );
     return changed;
 }
+
 
 int main ( int argc, char* argv[] ) {
 

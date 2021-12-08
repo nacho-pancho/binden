@@ -87,51 +87,62 @@ static index_t apply_denoiser (
     const index_t* quorum_freq_1,
     const config_t* cfg ) {
 
-    const double p01 = cfg->p01;
-    const double p10 = cfg->p10;
-    const double pe = p01 + p10;
+    const double p0 = cfg->p01;
+    const double p1 = cfg->p10;
+    const double pe = p0 + p1;
     const double pc = 1.0 - pe;
+    /*
+    * we define the thresholds:
+    *  t0 = 2p1(1-p0)/(1+p1-p0)
+    *  t1 = 2p0(1-p1)/(1+p0-p1)
+    * so that
+    * 
+    * if z = 0:
+    * x = 0 if n_0/n >= t0
+    * x = 1 otherwise
+    * 
+    * if z = 1:
+    * x = 1 if n_1/n >= t1
+    * x = 0 otherwise
+    * 
+    */  
+    const double t0 = 2.0*p1*(1.0-p0) / ( 1.0+p1-p0);
+    const double t1 = 2.0*p0*(1.0-p1) / ( 1.0+p0-p1);
+    printf("DUDE: p0=%f p1=%f t0=%f t1=%f\n",p0,p1,t0,t1);
 
     const int m = in->info.height;
     const int n = in->info.width;
     const index_t total = m * n;
-    double* quorum_prob = ( double* ) calloc ( k + 1,  sizeof( double ) );
-
-    for ( int r = 0 ; r < k ; ++r ) {
-        quorum_prob[ r ] = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
+    char* lookup_table = ( char* ) calloc ( 2*(k + 1),  sizeof( char ) );
+    info( "Lookup table:\n");
+    for ( int r = 0 ; r <= k  ; ++r ) {
+        const double n  = ( double ) quorum_freq[ r ]  / ( double ) total;
+        const double q1 = ( ( double ) quorum_freq_1[ r ] ) / ( ( double ) quorum_freq[ r ] );        
+        const double q0 = 1.0 - q1;
+        const char x0 = q0 >= t0 ? 0 : 1;
+        const char x1 = q1 >= t1 ? 1 : 0;
+        lookup_table[2*r]  = x0;
+        lookup_table[2*r+1] = x1;
+    	info ( "S=%3d P(S)=%8.6f P(0|S) %8.6f t0 %8.6f x(0,S) %d P(1|S) %8.6f t1 %8.6f x(1,S) %d\n", r, n, q0, t0, x0, q1, t1, x1 );
     }
-    //info ( "estimating probabilities (Krichevskii-Trofimoff)....\n" );
-    for ( int r = 0 ; r < k + 1 ; ++r ) {
-        quorum_prob[ r ]   = ( 0.5 + ( double ) quorum_freq_1[ r ] ) / ( 1.0 + ( double ) quorum_freq[ r ] );
-        const double PS  = ( double ) quorum_freq[ r ]  / ( double ) total;
-        const double PS1 = ( double ) quorum_freq_1[ r ] / ( double ) total;
-	//info ( "sum %3d P(S)=%8.6f P(1,S)=%8.6f P(1|S) %8.6f\n", r, PS, PS1, quorum_prob[ r ] );
-    }
 
-    info ( "denoising....\n" );
     index_t changed = 0;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             //
             // denoising rule:
             //
-            const pixel_t z = get_linear_pixel ( in, li );
+            const int z = get_linear_pixel ( in, li );
             const int S = quorum_map[ li ];
-            const double q = quorum_prob[ S ];
-            // TODO: fix for non-symmetric!!
-            if ( z && ( q < pe ) ) {
-                //info("%d %d S=%d q=%8.6f: 1 -> 0\n",i,j,S,q);
-                changed++;
-                set_linear_pixel ( out, li, 0 );
-            } else if ( ( !z ) && ( q > pc ) ) {
-                set_linear_pixel ( out, li, 1 );
-                //info("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
-                changed++;
+            const int x = lookup_table[(S<<1)+z];
+            if (x!=z) {
+                set_linear_pixel ( out, li, x );
+                changed ++;
             }
         }
     }
     info ( "Changed %ld pixels\n", changed );
-    free ( quorum_prob );
+    free ( lookup_table );
     return changed;
 }
 

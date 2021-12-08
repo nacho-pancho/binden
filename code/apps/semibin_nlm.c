@@ -184,7 +184,7 @@ int main ( int argc, char* argv[] ) {
             const int x = ( int ) ( 0.5 + all_means[ li ] + y / norm );
             set_linear_pixel ( &out, li, x > 0 ? ( x < 255 ? x : 255 ) : 0 );
         }
-        info("line %06d\n",i);
+        //info("line %06d\n",i);
     }
 
     info ( "saving result to %s...\n",cfg.output_file );
