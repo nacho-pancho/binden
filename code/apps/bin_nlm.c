@@ -222,33 +222,18 @@ int main ( int argc, char* argv[] ) {
     out.info = img->info;
     out.pixels = pixels_copy ( &img->info, img->pixels );
     //
-    //
-    //
-    //
-    // create template
-    //
-
-    //
     // non-local means
     // search a window of size R
     //
-    info ( "extracting patches....\n" );
     extract_patches ( img, tpl );
 
-    info ( "denoising / first pass....\n" );
     apply_denoiser ( &out, img, tpl, &cfg );
-#if 0
-    info ( "denoising / second pass....\n" );
-    extract_patches ( &out, tpl );
-    apply_denoiser ( &out, img, tpl, &cfg );
-#endif
-    info ( "saving result...\n" );
+
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
-    info ( "finishing...\n" );
     free ( all_patches );
     free_patch_template ( tpl );
     pixels_free ( img->pixels );

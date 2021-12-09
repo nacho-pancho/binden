@@ -201,7 +201,6 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    info ( "computing sums....\n" );
     const index_t n = img->info.width;
     const index_t m = img->info.height;
     const index_t npatches = m * n;
@@ -234,14 +233,11 @@ int main ( int argc, char* argv[] ) {
     //stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
     //apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
 
-    info ( "saving result...\n" );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
-
-    info ( "finishing...\n" );
     free ( quorum_prob );
     free ( quorum_freq_1 );
     free ( quorum_freq );

@@ -258,7 +258,6 @@ int read_rows ( FILE * fhandle, const image_info_t * info, const int nrows, pixe
                 }
             }
         }
-        printf ( "read %lu bytes\n", bytes_read );
         return RESULT_OK;
     }
 }
@@ -330,7 +329,6 @@ int write_rows ( const image_info_t * info, const int nrows, const pixel_t * pix
                 bytes_written++;
             }
         }
-        printf ( "wrote %lu bytes\n", bytes_written );
         return RESULT_OK;
     }
 }
