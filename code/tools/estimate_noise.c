@@ -33,6 +33,8 @@ typedef struct config {
     const char * input_file;
     int template_radius;
     int template_norm;
+    int maxs;
+    double tol;
 } config_t;
 
 config_t parse_opt ( int argc, char* * argv );
@@ -77,15 +79,58 @@ static index_t patch_sums (
     return total;
 }
 
-
-static double loglik0(const index_t* ns, const index_t* ns1, const index_t n, const index_t k, const index_t maxs, const double p0) {
+/**
+ * @brief approximate log-likelihood of all-zeros patches w.r.t. noise parameter
+ *        assuming ones are noise
+ * @param ns   number of occurences of S=s
+ * @param ns1  number of occurences of S=s,z=1
+ * @param n    total length of signal
+ * @param k    context size
+ * @param maxs maximum number of terms
+ * @param p0   noise parameter
+ * @return double likelihood
+ */
+static double loglik0(
+        const index_t* ns, 
+        const index_t* ns1, 
+        const index_t n, 
+        const index_t k, 
+        const index_t maxs, 
+        const double p0) {
     const double logp = log10(p0);
     const double log1mp = log10(1.0-p0);
     double a = 0.0;
     for ( int r = 0 ; r <= maxs  ; ++r ) {
-      a += ns1[r]*logp + (ns[r]-ns1[r])*log1mp + r*logp + (k-r)*log1mp;
+      a += ns[r]*(ns1[r]*logp + (ns[r]-ns1[r])*log1mp + r*logp + (k-r)*log1mp);
     }
-    return -a;
+    return -a/(double)n; // just a normalization
+}
+
+/**
+ * @brief approximate log-likelihood of all-ONES patches w.r.t. noise parameter
+ *        assuming ZEROS are noise
+ * @param ns   number of occurences of S=s
+ * @param ns1  number of occurences of S=s,z=1
+ * @param n    total length of signal
+ * @param k    context size
+ * @param maxs maximum number of terms
+ * @param p0   noise parameter
+ * @return double likelihood
+ */
+static double loglik1(
+        const index_t* ns, 
+        const index_t* ns1, 
+        const index_t n, 
+        const index_t k, 
+        const index_t maxs, 
+        const double p0) {
+    const double logp = log10(p0);
+    const double log1mp = log10(1.0-p0);
+    double a = 0.0;
+    for ( int r = k ; r >= (k-maxs)  ; --r ) {
+      a += ns[r]*((ns[r]-ns1[r])*logp + ns1[r]*log1mp + (k-r)*logp + r*log1mp);
+    }
+    return -a/(double)n; // just a normalization
 }
 
 
@@ -99,50 +144,60 @@ static void estimate_noise (
     const int m = in->info.height;
     const int n = in->info.width;
     const index_t total = m * n;
-    info( "Lookup table:\n");
     // compute p1 and p0 using maximum likelihood on the pairs of statistics (n_s, n_s1), s=0,...,k
     // we cannot do this for the whole range s=0,...,k, otherwise we end up with a global estimate
     // which is not what we want. WE only want to evaluate this on "very white" and "very black"
     // contexts. So, assuming a maximum value of 0.2 (quite high), we can discard all terms above
     // s=4 or so.    
     //
-    // binary search:
+    // golden ratio search:
     //
-#if 0
-    double tol = 1e-6;
-    double right = 0.5-1e-6;
-    double left  = 1e-6;
+    const double phi = (1.0+sqrt(5.0))/2.0;
+    const double r = 1.0/(1.0+phi);
+    const double tol = cfg->tol;
+    const double maxs = cfg->maxs;
+
+    double left   = 0.0;
+    double right  = 0.5;
     while ( (right-left) >= tol) {
-        double mid = 0.5*(right+left);
-	const double fmid   = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, mid);
-	const double fleft  = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, mid);
-	const double fright = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, mid);
-    	info ( "p=%8.6f -log P()=%8.6f\n", mid,fmid); 
-	if ((fmid < fleft) && (fmid < fright)) {
-	  left  = 0.5*(mid+left);	
-	  right = 0.5*(mid+right);	
-	} else if (fleft < fmid) {
-	  right = mid;
-	  mid   = 0.5*(left+right);
-	} else {
-	  left = mid;
-	  mid   = 0.5*(left+right);
-	}
-
+        double midleft    = left  + r*(right-left);
+        double midright   = right - r*(right-left); 
+        const double fmidleft   = loglik0(quorum_freq, quorum_freq_1, m*n, k, maxs, midleft);
+        const double fmidright  = loglik0(quorum_freq, quorum_freq_1, m*n, k, maxs, midright);
+        if (fmidleft < fmidright) {
+            right    = midright;
+            midright = midleft;
+            midleft  = left  + r*(right-left);
+            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right,midleft,fmidleft); 
+        } else {
+            left = midleft;
+            midleft  = midright;
+            midright = right - r*(right-left);
+            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right, midright,fmidright); 
+        }
     }
-#endif
-    double pbest = 0;
-    double fbest = 1e20;
-    for ( double p0 = 0.001; p0 <= 0.2; p0 += 0.002) {
-        const double f0 = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, p0);
-    	info ( "p0=%8.6f loglik=%8.6f\n", p0, f0);
-	if (f0 < fbest) {
-	  pbest = p0;
-	  fbest = f0;
-	}
-    }
-    printf("BEST p0=%8.6f\n",pbest);
+    info("P(0->1)=%f\n",(right+left)/2.0);
 
+    left   = 0.0;
+    right  = 0.5;
+    while ( (right-left) >= tol) {
+        double midleft    = left  + r*(right-left);
+        double midright   = right - r*(right-left); 
+        const double fmidleft   = loglik1(quorum_freq, quorum_freq_1, m*n, k, maxs, midleft);
+        const double fmidright  = loglik1(quorum_freq, quorum_freq_1, m*n, k, maxs, midright);
+        if (fmidleft < fmidright) {
+            right    = midright;
+            midright = midleft;
+            midleft  = left  + r*(right-left);
+            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right,midleft,fmidleft); 
+        } else {
+            left = midleft;
+            midleft  = midright;
+            midright = right - r*(right-left);
+            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right, midright,fmidright); 
+        }
+    }
+    info("P(1->0)=%f\n",(right+left)/2.0);
 }
 
 
@@ -167,8 +222,7 @@ int main ( int argc, char* argv[] ) {
         return RESULT_ERROR;
     }
     const int exclude_center = 1;
-    const int norm = 2;
-    patch_template_t* tpl = generate_ball_template(cfg.template_radius,norm,exclude_center);
+    patch_template_t* tpl = generate_ball_template(cfg.template_radius,cfg.template_norm,exclude_center);
 
     const index_t n = img->info.width;
     const index_t m = img->info.height;
@@ -195,6 +249,8 @@ static struct argp_option options[] = {
     {"quiet",          'q', 0, OPTION_ARG_OPTIONAL, "Don't produce any output", 0 },
     {"radius",         'r', "natural", 0, "patch radius", 0 },
     {"norm",           'n', "natural", 0, "patch norm", 0 },
+    {"tol",            't', "tolerance", 0, "golden ratio search tolerance", 0 },
+    {"maxs",           's', "terms", 0, "number of terms in approx. likelihood", 0 },
     { 0 } // terminator
 };
 
@@ -225,6 +281,8 @@ config_t parse_opt ( int argc, char* * argv ) {
     cfg.input_file  = NULL;
     cfg.template_radius = 3;
     cfg.template_norm = 2;
+    cfg.tol = 1e-6;
+    cfg.maxs = 5;
     argp_parse ( &argp, argc, argv, 0, 0, &cfg );
     return cfg;
 }
@@ -249,6 +307,12 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'n':
         cfg->template_norm = atoi(arg);
+        break;
+    case 't':
+        cfg->tol = atof(arg);
+        break;
+    case 's':
+        cfg->maxs = atoi(arg);
         break;
 
     case ARGP_KEY_ARG:
