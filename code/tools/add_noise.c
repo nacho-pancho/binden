@@ -65,7 +65,11 @@ int main ( int argc, char* argv[] ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             const int x = get_linear_pixel(img, li);
             const double coin = drand48();
-            set_linear_pixel ( &out, li, coin < p01 ? 1-x: coin > (1.0-p10) ? 1-x : x );
+	    if (!x && (coin < p01)) { // 0->1
+              set_linear_pixel ( &out, li, 1);
+	    } else if (x && (coin < p10)) {
+              set_linear_pixel ( &out, li, 0);
+	    }
         }
     }
 
