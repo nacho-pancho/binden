@@ -78,6 +78,17 @@ static index_t patch_sums (
 }
 
 
+static double loglik0(const index_t* ns, const index_t* ns1, const index_t n, const index_t k, const index_t maxs, const double p0) {
+    const double logp = log10(p0);
+    const double log1mp = log10(1.0-p0);
+    double a = 0.0;
+    for ( int r = 0 ; r <= maxs  ; ++r ) {
+      a += ns1[r]*logp + (ns[r]-ns1[r])*log1mp + r*logp + (k-r)*log1mp;
+    }
+    return -a;
+}
+
+
 static void estimate_noise (
     const image_t* in,
     const index_t k,
@@ -89,19 +100,48 @@ static void estimate_noise (
     const int n = in->info.width;
     const index_t total = m * n;
     info( "Lookup table:\n");
-    for ( int r = 0 ; r <= k  ; ++r ) {
-        // number of occurences of this sum
-        const double n  = ( double ) quorum_freq[ r ]  / ( double ) total;
-        // empirical probability of 1
-        const double q1 = ( ( double ) quorum_freq_1[ r ] ) / ( ( double ) quorum_freq[ r ] );        
-        // empirical probability of 0
-        const double q0 = 1.0 - q1;
-        //
-        // given k what is the expected weight of an all-white patch for this level (q1) of noise?
-        // 1*q1*q0^(k-1) + 2*q2^2 +
-        //
-    	info ( "S=%3d P(S)=%8.6f P(0|S) %8.6f P(1|S) %8.6f\n", r, n, q0, q1);
+    // compute p1 and p0 using maximum likelihood on the pairs of statistics (n_s, n_s1), s=0,...,k
+    // we cannot do this for the whole range s=0,...,k, otherwise we end up with a global estimate
+    // which is not what we want. WE only want to evaluate this on "very white" and "very black"
+    // contexts. So, assuming a maximum value of 0.2 (quite high), we can discard all terms above
+    // s=4 or so.    
+    //
+    // binary search:
+    //
+#if 0
+    double tol = 1e-6;
+    double right = 0.5-1e-6;
+    double left  = 1e-6;
+    while ( (right-left) >= tol) {
+        double mid = 0.5*(right+left);
+	const double fmid   = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, mid);
+	const double fleft  = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, mid);
+	const double fright = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, mid);
+    	info ( "p=%8.6f -log P()=%8.6f\n", mid,fmid); 
+	if ((fmid < fleft) && (fmid < fright)) {
+	  left  = 0.5*(mid+left);	
+	  right = 0.5*(mid+right);	
+	} else if (fleft < fmid) {
+	  right = mid;
+	  mid   = 0.5*(left+right);
+	} else {
+	  left = mid;
+	  mid   = 0.5*(left+right);
+	}
+
     }
+#endif
+    double pbest = 0;
+    double fbest = 1e20;
+    for ( double p0 = 0.001; p0 <= 0.2; p0 += 0.002) {
+        const double f0 = loglik0(quorum_freq, quorum_freq_1, m*n, k, 4, p0);
+    	info ( "p0=%8.6f loglik=%8.6f\n", p0, f0);
+	if (f0 < fbest) {
+	  pbest = p0;
+	  fbest = f0;
+	}
+    }
+    printf("BEST p0=%8.6f\n",pbest);
 
 }
 
