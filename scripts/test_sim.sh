@@ -23,9 +23,19 @@ echo -e "\n-----------------------------------------\n"
 build/tools/compare --output=${dif} ${clean} ${noisy}
 
 echo -e "\n\n=========================================================================\n"
+echo "MORPHOLOGICAL"
+output=${outdir}/${image}_p${perr}_morph_${template}.pnm
+dif=${outdir}/${image}_p${perr}_morph_${template}_dif.pnm
+time code/morph.py --output=/tmp/morph.pgm --input=${noisy}
+convert /tmp/morph.pgm -depth 1 ${output}
+echo -e "\n-----------------------------------------\n"
+build/tools/compare --output=${dif} ${clean} ${output}
+
+
+echo -e "\n\n=========================================================================\n"
 echo "MEDIAN"
 output=${outdir}/${image}_p${perr}_median_${template}.pnm
-dif=${outdir}/${image}_median_${template}_p${perr}_dif.pnm
+dif=${outdir}/${image}_p${perr}_median_${template}_dif.pnm
 time build/apps/median --template=tpl/${template}.tpl --stats=${stats} --output=${output} ${noisy}
 echo -e "\n-----------------------------------------\n"
 build/tools/compare --output=${dif} ${clean} ${output}
@@ -33,14 +43,14 @@ build/tools/compare --output=${dif} ${clean} ${output}
 echo -e "\n\n=========================================================================\n"
 echo "VANILLA DUDE"
 output=${outdir}/${image}_p${perr}_dude_${template}.pnm
-dif=${outdir}/${image}_dude_${template}_p${perr}_dif.pnm
+dif=${outdir}/${image}_p${perr}_dude_${template}_dif.pnm
 time build/apps/bin_dude --template=tpl/${template}.tpl --output=${output} --perr=${perr} ${opt} ${noisy}
 build/tools/compare --output=${dif} ${clean} ${output}
 
 echo -e "\n\n=========================================================================\n"
 echo "VANILLA DUDE x 3"
 output=${outdir}/${image}_p${perr}_dudex2_${template}.pnm
-dif=${outdir}/${image}_dudex2_${template}_p${perr}_dif.pnm
+dif=${outdir}/${image}_p${perr}_dudex2_${template}_dif.pnm
 time build/apps/bin_dude --template=tpl/${template}.tpl --output=${output} --perr=${perr} --iterations=3 ${noisy}
 build/tools/compare --output=${dif} ${clean} ${output}
 
@@ -48,23 +58,23 @@ build/tools/compare --output=${dif} ${clean} ${output}
 echo -e "\n\n=========================================================================\n"
 echo "QUORUM DUDE"
 output=${outdir}/${image}_p${perr}_quorum_${template}.pnm
-dif=${outdir}/${image}_quorum_${template}_p${perr}_dif.pnm
+dif=${outdir}/${image}_p${perr}_quorum_${template}_dif.pnm
 time build/apps/quorum_den --template=tpl/${template}.tpl --output=${output} --perr=${perr} ${opt} ${noisy}
 echo -e "\n-----------------------------------------\n"
 build/tools/compare --output=${dif} ${clean} ${output}
 
 echo -e "\n\n=========================================================================\n"
-echo "QUORUM DUDE x 2"
-output=${outdir}/${image}_p${perr}_quorumx2_${template}.pnm
-dif=${outdir}/${image}_quorumx2_${template}_p${perr}_dif.pnm
-time build/apps/quorum_den --template=tpl/${template}.tpl --output=${output} --perr=${perr} --iterations=2 ${noisy}
+echo "QUORUM DUDE / BALL TEMPLATE"
+output=${outdir}/${image}_p${perr}_quorum_ball2.pnm
+dif=${outdir}/${image}_p${perr}_quorum_ball2_dif.pnm
+time build/apps/quorum_den --template=tpl/ball2.tpl --output=${output} --perr=${perr} --iterations=2 ${noisy}
 echo -e "\n-----------------------------------------\n"
 build/tools/compare --output=${dif} ${clean} ${output}
 
 echo -e "\n\n=========================================================================\n"
 echo "BINARY NLM"
 output=${outdir}/${image}_p${perr}_binnlm_${template}.pnm
-dif=${outdir}/${image}_binnlm_${template}_p${perr}_dif.pnm
+dif=${outdir}/${image}_p${perr}_binnlm_${template}_dif.pnm
 time build/apps/bin_nlm --template=tpl/${template}.tpl --output=${output} --search=11 --perr=${perr} ${noisy}
 echo -e "\n-----------------------------------------\n"
 build/tools/compare --output=${dif} ${clean} ${output}

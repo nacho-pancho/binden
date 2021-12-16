@@ -107,11 +107,11 @@ static index_t apply_denoiser (
         }
     }
     free_patch ( Pij );
-    info ( "changed : 0->1 (%8.6f%%) 1->0 (%8.6f%%) total (%8.6f%%) pixels\n", 
+    info ( "changed : 0->1 (%8.4f%%) 1->0 (%8.4f%%) total (%8.4f%%) pixels\n", 
         100.0*((double)oned)/((double)total), 
         100.0*((double)zeroed)/((double)total),
         100.0*((double)(zeroed+oned))/((double)total));
-    info ( "expected: 0->1 (%8.6f%%) 1->0 (%8.6f%%) total (%8.6f%%) pixels\n", 
+    info ( "expected: 0->1 (%8.4f%%) 1->0 (%8.4f%%) total (%8.4f%%) pixels\n", 
         100.0*p0, 100.0*p1, 100.0*pe);
     return (oned+zeroed);
 }

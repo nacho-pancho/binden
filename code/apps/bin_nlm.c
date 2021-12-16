@@ -33,7 +33,7 @@ static upixel_t * extract_patches ( const image_t* img, const patch_template_t* 
     const index_t npatches = m * n;
     const size_t ki = tpl->k;
     const size_t ko = compute_binary_mapping_samples ( ki );
-    info ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
+    debug ( "allocating %ld bytes for all %ld patches\n", sizeof( upixel_t ) * ko * npatches, npatches );
     all_patches = ( upixel_t* ) malloc ( ko * npatches * sizeof( upixel_t ) );
     patch_t* p = alloc_patch ( ki );
     patch_t* q = alloc_patch ( ko );
@@ -125,7 +125,7 @@ static index_t apply_denoiser ( image_t* out, const image_t* img,
     const double h = cfg->nlm_weight_scale;
     const double C = -0.5 / ( h * h );
     float* w = create_gaussian_weights ( tpl, h );
-    info("NLM h=%f C=%f p01=%f p10=%f R=%ld maxd=%d\n",h,C,p01,p10,R, maxd);
+    debug("NLM h=%f C=%f p01=%f p10=%f R=%ld maxd=%d\n",h,C,p01,p10,R, maxd);
 
     //index_t w[ maxd ];
     //for ( index_t d = 0 ; d < maxd ; ++d ) {
