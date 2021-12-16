@@ -236,8 +236,8 @@ void print_template ( const patch_template_t * ptpl ) {
 /*---------------------------------------------------------------------------------------*/
 
 void dump_template ( const patch_template_t * ptpl, FILE * ft ) {
-    index_t k;
-    fprintf ( ft, "%ld\n", k );
+    index_t k = 0;
+    fprintf ( ft, "%ld\n", ptpl->k );
     for ( k = 0 ; k < ptpl->k ; k++ ) {
         fprintf ( ft, "%3ld %3ld\n", ptpl->coords[ k ].i, ptpl->coords[ k ].j );
     }
@@ -253,6 +253,7 @@ int save_template ( const char* fname, const patch_template_t * ptpl ) {
     }
     dump_template ( ptpl, fh );
     fclose ( fh );
+    return 0;
 }
 
 /*---------------------------------------------------------------------------------------*/

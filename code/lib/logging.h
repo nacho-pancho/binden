@@ -25,7 +25,7 @@
 #define LOG_WARNING 90
 #define LOG_QUIET   80
 #define LOG_INFO    70
-#define LOG_DEBUG   60
+#define LOG_DEBUG   50
 #define LOG_ALL     0
 
 void set_log_level ( int level );

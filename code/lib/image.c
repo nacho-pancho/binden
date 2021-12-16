@@ -28,6 +28,22 @@ pixel_t * pixels_copy ( const image_info_t * info, const pixel_t* src ) {
     return dest;
 }
 
+image_t* image_copy ( const image_t * src ) {
+    image_t* dest = (image_t*) calloc(1,sizeof(image_t));
+    memcpy(dest,src,sizeof(image_t));
+    dest->pixels = pixels_copy(&src->info, src->pixels);
+    return dest;
+}
+
+void pixels_copyto ( image_t* dest, const image_t * src ) {
+    const image_info_t* info = &src->info;
+    const int srcpixels = info->channels * info->width * info->height;
+    const int destpixels = dest->info.channels * dest->info.width * dest->info.height;
+    assert ( srcpixels > 0 );
+    assert ( srcpixels == destpixels) ;
+    memcpy ( dest->pixels, src->pixels, srcpixels * sizeof( pixel_t ) );
+}
+
 /*---------------------------------------------------------------------------------------*/
 
 int get_pixel ( const image_t * pimg, const int i, const int j ) {

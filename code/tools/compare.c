@@ -76,7 +76,6 @@ int main ( int argc, char* argv[] ) {
 
     const index_t n = img1->info.width;
     const index_t m = img1->info.height;
-    const index_t npatches = m * n;
     //
     //
     //

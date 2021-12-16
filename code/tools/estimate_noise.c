@@ -143,7 +143,6 @@ static void estimate_noise (
 
     const int m = in->info.height;
     const int n = in->info.width;
-    const index_t total = m * n;
     // compute p1 and p0 using maximum likelihood on the pairs of statistics (n_s, n_s1), s=0,...,k
     // we cannot do this for the whole range s=0,...,k, otherwise we end up with a global estimate
     // which is not what we want. WE only want to evaluate this on "very white" and "very black"
@@ -224,9 +223,6 @@ int main ( int argc, char* argv[] ) {
     const int exclude_center = 1;
     patch_template_t* tpl = generate_ball_template(cfg.template_radius,cfg.template_norm,exclude_center);
 
-    const index_t n = img->info.width;
-    const index_t m = img->info.height;
-    const index_t npatches = m * n;
     quorum_freq   = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
     quorum_freq_1 = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
     //

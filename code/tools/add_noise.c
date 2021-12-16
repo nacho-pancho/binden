@@ -52,7 +52,6 @@ int main ( int argc, char* argv[] ) {
     out.pixels = pixels_copy ( &img->info, img->pixels );
     const index_t n = img->info.width;
     const index_t m = img->info.height;
-    const index_t npatches = m * n;
     //
     // if only p01 is specified (p10=-1), the noise is assumed symmetric and split even between p01 and p10
     //

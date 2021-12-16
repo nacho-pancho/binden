@@ -114,7 +114,6 @@ long
 mrand48(void)
 {
 /* This function generates the same sequence as the HP-UX implementation */
-    ulong cy;
 
     update_buffer();
     return (long)((X[2]<<16)+X[1]);

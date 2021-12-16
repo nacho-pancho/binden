@@ -21,30 +21,6 @@
 #include "templates.h"
 #include "logging.h"
 
-/**
- * pseudo-image where each pixel's value contains the sum
- * of its patch samples
- * size (m x n)
- */
-index_t* quorum_map;
-
-/**
- * frequency of each quorum value (size k + 1)
- * P(Q=q)
- */
-static index_t* quorum_freq;
-
-/**
- * frequency of each quorum value given that the center is 1
- * each quorum value. (size k + 1)
- */
-static index_t* quorum_freq_1;
-
-/**
- * frequency of each quorum value given that the center is 1
- * each quorum value. (size k + 1)
- */
-static double* quorum_prob;
 
 /**
  * @brief DUDE denoiser for binary asymmetric channel
@@ -69,7 +45,9 @@ static double* quorum_prob;
  * @return index_t number of changed pixels
  */
 static index_t apply_denoiser (
-    image_t* out, const image_t* in,
+    image_t* out, 
+    const image_t* in, 
+    const image_t* pre,
     const patch_template_t* tpl,
     patch_node_t* stats,
     config_t* cfg) {
@@ -77,7 +55,6 @@ static index_t apply_denoiser (
     const double p0 = cfg->p01;
     const double p1 = cfg->p10;
     const double pe = p0 + p1;
-    const double pc = 1.0 - pe;
     /*
     * we define the thresholds:
     *  t0 = 2p1(1-p0)/(1+p1-p0)
@@ -95,13 +72,12 @@ static index_t apply_denoiser (
     */  
     const double t0 = 2.0*p1*(1.0-p0) / ( 1.0+p1-p0);
     const double t1 = 2.0*p0*(1.0-p1) / ( 1.0+p0-p1);
-    printf("DUDE: p0=%f p1=%f t0=%f t1=%f\n",p0,p1,t0,t1);
+    //info("DUDE: p0=%f p1=%f t0=%f t1=%f\n",p0,p1,t0,t1);
     const int m = in->info.height;
     const int n = in->info.width;
     const index_t total = m * n;
 
-    info ( "denoising....\n" );
-    index_t changed = 0;
+    index_t zeroed = 0, oned = 0;
     const index_t k = tpl->k;
     patch_t* Pij = alloc_patch ( k );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
@@ -109,14 +85,14 @@ static index_t apply_denoiser (
             //
             // denoising rule:
             //
-            get_patch ( in, tpl, i, j, Pij );
+            get_patch ( pre, tpl, i, j, Pij );
             const pixel_t z = get_linear_pixel ( in, li );
             const patch_node_t* patch_stats  = get_patch_node( stats, Pij );
             if ( !z ) { // z = 0
                 //const double q0 = (0.5 + (double)(patch_stats->occu-patch_stats->counts)) / (1.0 + (double) patch_stats->occu); 
                 const double n0 = (double)(patch_stats->occu-patch_stats->counts);
                 if (n0 < (t0 * (double)patch_stats->occu)) {
-                    changed++;
+                    oned++;
                     set_linear_pixel ( out, li, 1 );
                 }
             } else { // z = 1
@@ -125,21 +101,26 @@ static index_t apply_denoiser (
                 if (n1 < (t1 * (double)patch_stats->occu)) {
                     set_linear_pixel ( out, li, 0 );
                     //info("%d %d S=%d q=%6.6f: 0 -> 1\n",i,j,S,q);
-                    changed++;
+                    zeroed++;
                 }
             }
         }
     }
     free_patch ( Pij );
-    info ( "Changed %ld pixels\n", changed );
-    free ( quorum_prob );
-    return changed;
+    info ( "changed : 0->1 (%8.6f%%) 1->0 (%8.6f%%) total (%8.6f%%) pixels\n", 
+        100.0*((double)oned)/((double)total), 
+        100.0*((double)zeroed)/((double)total),
+        100.0*((double)(zeroed+oned))/((double)total));
+    info ( "expected: 0->1 (%8.6f%%) 1->0 (%8.6f%%) total (%8.6f%%) pixels\n", 
+        100.0*p0, 100.0*p1, 100.0*pe);
+    return (oned+zeroed);
 }
+
 
 
 int main ( int argc, char* argv[] ) {
 
-    image_t out;
+    image_t* out = NULL;
     config_t cfg = parse_opt ( argc, argv );
 
     image_t* img = read_pnm ( cfg.input_file );
@@ -174,8 +155,10 @@ int main ( int argc, char* argv[] ) {
         free ( img );
         return RESULT_ERROR;
     }
+    printf("initial output image\n");
+    out = image_copy(img);
 
-    image_t* pre = img;
+    image_t* pre = NULL;
     if ( cfg.prefiltered_file != NULL ) {
         pre = read_pnm ( cfg.prefiltered_file );
         if ( pre->info.result != RESULT_OK ) {
@@ -186,10 +169,10 @@ int main ( int argc, char* argv[] ) {
             free ( pre );
             return RESULT_ERROR;
         }
+    } else {
+        printf("initial prefiltered image\n");
+        pre = image_copy ( img );
     }
-
-    out.info = img->info;
-    out.pixels = pixels_copy ( &img->info, img->pixels );
     //
     //
     //
@@ -201,18 +184,12 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    const index_t n = img->info.width;
-    const index_t m = img->info.height;
-    const index_t npatches = m * n;
-    //
-    // first pass:  gather patch stats
-    //
-    patch_node_t* stats;
+    patch_node_t* stats = NULL;
     if ( cfg.stats_file ) {
         //
-        // load patches stats from a file
+        // if statistics are precomputed
+        // the algorithm is run only once using the stats from the file
         //
-        info ( "loading patch statistics from file....\n" );
         stats = load_stats ( cfg.stats_file );
         if ( !stats ) {
             fprintf ( stderr, "could not load stats from %s.\n", cfg.stats_file );
@@ -221,30 +198,34 @@ int main ( int argc, char* argv[] ) {
             free ( img );
             return RESULT_ERROR;
         }
+        apply_denoiser ( out, img, img, tpl, stats, &cfg);
     } else {
-        info ( "gathering patch stats from image....\n" );
-        stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
+        //
+        // if stats are computed on this image, we have the option of re-running the algorithm
+        // multiple times, using the denoised output for gathering stats
+        //
+        for (int i = 0; i < cfg.iterations; i++) {
+            info ("iteration %d\n",i);
+            stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );        
+            apply_denoiser ( out, img, pre, tpl, stats, &cfg);
+            free_node(stats);
+            stats = 0;
+            // prefiltered for next iter is output from this iter
+            pixels_copyto(pre, out);
+        }
     }
 
-    apply_denoiser ( &out, img, tpl, stats, &cfg);
-    //
-    // second pass: using denoised contexts
-    //
-    //stats = gather_patch_stats ( img, pre, tpl, NULL, NULL );
-    //apply_denoiser ( &out, img, perr, tpl->k, quorum_map, quorum_freq, quorum_freq_1 );
-
-    int res = write_pnm ( cfg.output_file, &out );
+    int res = write_pnm ( cfg.output_file, out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
-
-    free ( quorum_prob );
-    free ( quorum_freq_1 );
-    free ( quorum_freq );
-    free ( quorum_map );
+    free_node(stats);
     free_patch_template ( tpl );
     pixels_free ( img->pixels );
-    pixels_free ( out.pixels );
+    pixels_free ( out->pixels );
+    pixels_free ( pre->pixels );
     free ( img );
+    free ( out );
+    free ( pre );
     return res;
 }

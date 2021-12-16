@@ -27,6 +27,7 @@ typedef struct config {
     int decay;
     int seed;
     int verbose;
+    int iterations;
     denoiser_f denoiser;
 } config_t;
 

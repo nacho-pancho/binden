@@ -13,7 +13,7 @@ indir="data/luisa/clean"
 #
 indir="data/luisa_sel"
 
-for image in r0566_0698
+for image in r0566_0517 r0566_0121 r0566_0175 r0566_0826 # r0566_0698
 do
   for pzero in 0.025 0.05 0.1
   do

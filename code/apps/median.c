@@ -68,7 +68,6 @@ int main ( int argc, char* argv[] ) {
     linear_template_t* ltpl = linearize_template ( tpl, m, n );
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
-            int count = 0;
             get_linear_patch ( img, ltpl, i, j, pat );
             long a = 0;
             for (int r = 0; r < k; ++r) {

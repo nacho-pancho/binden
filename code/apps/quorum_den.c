@@ -90,7 +90,6 @@ static index_t apply_denoiser (
     const double p0 = cfg->p01;
     const double p1 = cfg->p10;
     const double pe = p0 + p1;
-    const double pc = 1.0 - pe;
     /*
     * we define the thresholds:
     *  t0 = 2p1(1-p0)/(1+p1-p0)
@@ -108,13 +107,13 @@ static index_t apply_denoiser (
     */  
     const double t0 = 2.0*p1*(1.0-p0) / ( 1.0+p1-p0);
     const double t1 = 2.0*p0*(1.0-p1) / ( 1.0+p0-p1);
-    printf("DUDE: p0=%f p1=%f t0=%f t1=%f\n",p0,p1,t0,t1);
+    //printf("DUDE: p0=%f p1=%f t0=%f t1=%f\n",p0,p1,t0,t1);
 
     const int m = in->info.height;
     const int n = in->info.width;
     const index_t total = m * n;
     char* lookup_table = ( char* ) calloc ( 2*(k + 1),  sizeof( char ) );
-    info( "Lookup table:\n");
+    debug( "Lookup table:\n");
     for ( int r = 0 ; r <= k  ; ++r ) {
         const double n  = ( double ) quorum_freq[ r ]  / ( double ) total;
         const double q1 = ( ( double ) quorum_freq_1[ r ] ) / ( ( double ) quorum_freq[ r ] );        
@@ -123,10 +122,10 @@ static index_t apply_denoiser (
         const char x1 = q1 >= t1 ? 1 : 0;
         lookup_table[2*r]  = x0;
         lookup_table[2*r+1] = x1;
-    	info ( "S=%3d P(S)=%8.6f P(0|S) %8.6f t0 %8.6f x(0,S) %d P(1|S) %8.6f t1 %8.6f x(1,S) %d\n", r, n, q0, t0, x0, q1, t1, x1 );
+    	debug ( "S=%3d P(S)=%8.6f P(0|S) %8.6f t0 %8.6f x(0,S) %d P(1|S) %8.6f t1 %8.6f x(1,S) %d\n", r, n, q0, t0, x0, q1, t1, x1 );
     }
 
-    index_t changed = 0;
+    index_t oned = 0, zeroed = 0;
     for ( int i = 0, li = 0 ; i < m ; ++i ) {
         for ( int j = 0 ; j < n ; ++j, ++li ) {
             //
@@ -137,13 +136,18 @@ static index_t apply_denoiser (
             const int x = lookup_table[(S<<1)+z];
             if (x!=z) {
                 set_linear_pixel ( out, li, x );
-                changed ++;
+                if (x) oned++; else zeroed ++;
             }
         }
     }
-    info ( "Changed %ld pixels\n", changed );
     free ( lookup_table );
-    return changed;
+    info ( "changed : 0->1 (%8.6f%%) 1->0 (%8.6f%%) total (%8.6f%%) pixels\n", 
+        100.0*((double)oned)/((double)total), 
+        100.0*((double)zeroed)/((double)total),
+        100.0*((double)(zeroed+oned))/((double)total));
+    info ( "expected: 0->1 (%8.6f%%) 1->0 (%8.6f%%) total (%8.6f%%) pixels\n", 
+        100.0*p0, 100.0*p1, 100.0*pe);
+    return (oned+zeroed);
 }
 
 int main ( int argc, char* argv[] ) {
@@ -193,7 +197,6 @@ int main ( int argc, char* argv[] ) {
     // non-local means
     // search a window of size R
     //
-    info ( "computing sums....\n" );
     const index_t n = img->info.width;
     const index_t m = img->info.height;
     const index_t npatches = m * n;
@@ -201,24 +204,22 @@ int main ( int argc, char* argv[] ) {
     quorum_freq   = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
     quorum_freq_1 = ( index_t* ) calloc ( tpl->k + 1,  sizeof( index_t ) );
     //
-    // first pass: noisy sums
+    // 
     //
-    patch_sums ( img, img, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, tpl->k, quorum_map, quorum_freq, quorum_freq_1, &cfg );
-    //
-    // second pass: using denoised for contexts
-    //
-    patch_sums ( img, &out, tpl, quorum_map, quorum_freq, quorum_freq_1 );
-    apply_denoiser ( &out, img, tpl->k, quorum_map, quorum_freq, quorum_freq_1, &cfg );
+    for (int i = 0; i < cfg.iterations; i++) {
+        debug ("iteration %d\n",i);
+        patch_sums ( img, &out, tpl, quorum_map, quorum_freq, quorum_freq_1 );
+        apply_denoiser ( &out, img, tpl->k, quorum_map, quorum_freq, quorum_freq_1, &cfg );
+    }
 
-    info ( "saving result to %s ...\n",cfg.output_file );
+    debug ( "saving result to %s ...\n",cfg.output_file );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );
     }
 
 
-    info ( "finishing...\n" );
+    debug ( "finishing...\n" );
     free ( quorum_prob );
     free ( quorum_freq_1 );
     free ( quorum_freq );

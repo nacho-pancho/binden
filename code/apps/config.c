@@ -22,11 +22,12 @@ static struct argp_option options[] = {
     {"pzero",          '0', "probability", 0, "P(0->1)", 0 },
     {"pone",           '1', "probability", 0, "P(1->0)", 0 },
     {"search",         'R', "radius",  0, "output file", 0 },
-    {"decay",          'w', "rate",  0, "weight decay as function of distance", 0 },
-    {"nlmwin",         'h', "scale",  0, "non-local means window scale", 0 },
-    {"nlmweight",      'H', "scale",  0, "non-local means weight scale", 0 },
-    {"stats",          'S', "stats",    0, "stats filename.", 0 },
+    {"decay",          'w', "rate",    0, "weight decay as function of distance", 0 },
+    {"nlmwin",         'h', "scale",   0, "non-local means window scale", 0 },
+    {"nlmweight",      'H', "scale",   0, "non-local means weight scale", 0 },
+    {"stats",          'S', "stats",   0, "stats filename.", 0 },
     {"denoiser",       'D', "rule",    0, "denoising rule.", 0 },
+    {"iterations",     'I', "number",  0, "number of iterations of denoiser. Default 1 (no iterations).", 0 },
     { 0 } // terminator
 };
 
@@ -74,6 +75,7 @@ config_t parse_opt ( int argc, char* * argv ) {
     cfg.denoiser = majority;
     cfg.seed = 42;
     cfg.verbose = 0;
+    cfg.iterations = 1;
     argp_parse ( &argp, argc, argv, 0, 0, &cfg );
 
     return cfg;
@@ -98,6 +100,7 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'i':
         cfg->input_file = arg;
+        break;
     case 'o':
         cfg->output_file = arg;
         break;
@@ -137,6 +140,9 @@ static error_t _parse_opt ( int key, char * arg, struct argp_state * state ) {
         break;
     case 'w':
         cfg->decay = atoi ( arg );
+        break;
+    case 'I':
+        cfg->iterations = atoi ( arg );
         break;
     case 'h':
         cfg->nlm_window_scale = atof ( arg );

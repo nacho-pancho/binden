@@ -27,7 +27,6 @@ index_t apply_denoiser ( image_t* out, const image_t* img,
     const double p01 = cfg->p01;
     const double p10 = cfg->p10;
     const double pe = p01 + p10;
-    const double pc = 1.0 - pe;
 
     const index_t maxd = (int)((double)tpl->k * pe *2.0 + 0.5);
 
