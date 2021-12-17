@@ -167,12 +167,12 @@ static void estimate_noise (
             right    = midright;
             midright = midleft;
             midleft  = left  + r*(right-left);
-            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right,midleft,fmidleft); 
+            debug ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right,midleft,fmidleft); 
         } else {
             left = midleft;
             midleft  = midright;
             midright = right - r*(right-left);
-            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right, midright,fmidright); 
+            debug ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right, midright,fmidright); 
         }
     }
     info("P(0->1)=%f\n",(right+left)/2.0);
@@ -188,12 +188,12 @@ static void estimate_noise (
             right    = midright;
             midright = midleft;
             midleft  = left  + r*(right-left);
-            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right,midleft,fmidleft); 
+            debug ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right,midleft,fmidleft); 
         } else {
             left = midleft;
             midleft  = midright;
             midright = right - r*(right-left);
-            info ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right, midright,fmidright); 
+            debug ( "left=%f right=%f p=%8.6f -log P()=%12.10f\n", left,right, midright,fmidright); 
         }
     }
     info("P(1->0)=%f\n",(right+left)/2.0);

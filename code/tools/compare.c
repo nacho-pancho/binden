@@ -106,9 +106,9 @@ int main ( int argc, char* argv[] ) {
         }
     }
     const double k = 100.0/(double)(m*n);
-    printf("ref.  0    %9lu (%5.2f%%) 1    %9lu (%5.2f%%) total %9lu\n", m*n-n1, (m*n-n1)*k, n1, n1*k,  m*n );
-    printf("equal 0->0 %9lu (%5.2f%%) 1->1 %9lu (%5.2f%%) total %9lu (%5.2f%%)\n", n00, n00*k, n11, n11*k, m*n-a, (m*n-a)*k );
-    printf("diff. 0->1 %9lu (%5.2f%%) 1->0 %9lu (%5.2f%%) total %9lu (%5.2f%%)\n", n01, n01*k, n10, n10*k, a, a*k );
+    printf("ref.  0    %9lu (%8.5f%%) 1    %9lu (%8.5f%%) total %9lu\n", m*n-n1, (m*n-n1)*k, n1, n1*k,  m*n );
+    printf("equal 0->0 %9lu (%8.5f%%) 1->1 %9lu (%8.5f%%) total %9lu (%8.5f%%)\n", n00, n00*k, n11, n11*k, m*n-a, (m*n-a)*k );
+    printf("diff. 0->1 %9lu (%8.5f%%) 1->0 %9lu (%8.5f%%) total %9lu (%8.5f%%)\n", n01, n01*k, n10, n10*k, a, a*k );
     int res = write_pnm ( cfg.output_file, &out );
     if ( res != RESULT_OK ) {
         fprintf ( stderr, "error writing image %s.\n", cfg.output_file );

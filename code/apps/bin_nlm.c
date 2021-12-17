@@ -93,12 +93,12 @@ static int patch_dist ( const index_t i, const index_t j, const patch_template_t
     const upixel_t* samplesj = &all_patches[ nsamples * j ];
 #ifdef INSANE_DEBUG
     info ( "dist: patch %d:", i );
-    for ( int kk = 0 ; kk < nsamples ; kk++ ) {
+    for ( int kk = 0 ; kk < nsamples ; ++kk ) {
         info ( "%x ", samplesi[ kk ] );
     }
     info ( "\n" );
     info ( "dist: patch %d:", j );
-    for ( int kk = 0 ; kk < nsamples ; kk++ ) {
+    for ( int kk = 0 ; kk < nsamples ; ++kk ) {
         info ( "%x ", samplesj[ kk ] );
     }
     info ( "\n" );
@@ -121,7 +121,7 @@ static index_t apply_denoiser ( image_t* out, const image_t* img,
     const double p10 = cfg->p10;
     const double pe = p01 + p10;
 
-    const index_t maxd = (int)((double)tpl->k * pe * 2.0 + 0.5);
+    const index_t maxd = (int)((double)tpl->k * pe * 2.0 + 0.5) + 1; // make sure that it is never 0
     const double h = cfg->nlm_weight_scale;
     const double C = -0.5 / ( h * h );
     float* w = create_gaussian_weights ( tpl, h );
@@ -159,8 +159,10 @@ static index_t apply_denoiser ( image_t* out, const image_t* img,
                     norm += w[ d - 1 ];
                 }
             }
+	    if (norm == 0.0) 
+		    continue;
             const pixel_t z = get_linear_pixel ( img, li );
-            const pixel_t x = cfg->denoiser ( z, y, norm, p01, p10 );
+            const pixel_t x = (2.0*y) > norm ? 1: 0; //cfg->denoiser ( z, y, norm, p01, p10 );
             if ( z != x ) {
                 set_linear_pixel ( out, li, x );
                 if ( x )
